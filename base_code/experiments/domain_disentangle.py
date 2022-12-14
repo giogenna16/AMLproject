@@ -1,6 +1,6 @@
 import torch
 from models.base_model import DomainDisentangleModel
-from domain_disentagle_losses import *
+from experiments.domain_disentangle_losses import *
 
 W1= 0.3
 W2= 0.3

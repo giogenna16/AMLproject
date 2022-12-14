@@ -111,7 +111,9 @@ class DomainDisentangleModel(nn.Module):
         else: #reconstruction
             fcs= self.category_encoder(x)
             fds= self.category_encoder(x)
-            x= cat((fcs, fds)) #to concatenate (maybe put the dimension that should be 0)
+            print("fcs", fcs.shape)
+            print("fds", fds.shape)
+            x= cat((fcs, fds), dim=1) #to concatenate (maybe put the dimension that should be 0)
             x= self.reconstructor(x)
         return x
         
