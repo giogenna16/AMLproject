@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch.cat 
 from torchvision.models import resnet18
 
 class FeatureExtractor(nn.Module):
@@ -48,15 +49,69 @@ class DomainDisentangleModel(nn.Module):
         super(DomainDisentangleModel, self).__init__()
         self.feature_extractor = FeatureExtractor()
 
-        self.domain_encoder = None #TODO
-        self.category_encoder = None #TODO
+        self.domain_encoder =  nn.Sequential(
+            nn.Linear(512, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
 
-        self.domain_classifier = None #TODO
-        self.category_classifier = None #TODO
+            nn.Linear(512, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
 
-        self.reconstructor = None #TODO
-        raise NotImplementedError('[TODO] Implement DomainDisentangleModel')
+            nn.Linear(512, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU()
+        )
 
-    def forward(self, x):
-        #TODO
-        raise NotImplementedError('[TODO] Implement DomainDisentangleModel forward() method')
+        self.category_encoder = nn.Sequential(
+            nn.Linear(512, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+
+            nn.Linear(512, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+
+            nn.Linear(512, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU()
+        )
+
+        self.domain_classifier = nn.Linear(512, 2) #2 domains in the input (source and target)
+        self.category_classifier = nn.Linear(512, 7)
+
+        self.reconstructor = nn.Sequential(
+            nn.Linear(1024, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+
+            nn.Linear(512, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+
+            nn.Linear(512, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU()
+        )
+
+    def forward(self, x, branch):
+        x = self.feature_extractor(x)
+        if branch==0:#category disentanglement, phase1
+            x= self.category_encoder(x) #disentangler D1
+            x= self.category_classifier(x) 
+        elif branch==1: #category disentanglement, phase2
+            x= self.category_encoder(x) #disentangler D1
+            x= self.domain_classifier(x) #remember to freeze it in the main
+        elif branch==2:  #domain disentanglement, phase1
+            x= self.domain_encoder(x) #disentangler D2
+            x= self.domain_classifier(x)
+        elif branch==3: #domain disentanglement, phase2
+            x= self.domain_encoder(x) #disentangler D2
+            x= self.category_classifier(x) #remember to freeze it in the main
+        else: #reconstruction
+            fcs= self.category_encoder(x)
+            fds= self.category_encoder(x)
+            x= torch.cat((fcs, fds)) #to concatenate (maybe put the dimension that should be 0)
+            x= self.reconstructor(x)
+        return x
+        
