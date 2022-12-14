@@ -113,8 +113,7 @@ def build_splits_domain_disentangle(opt):
     source_examples = read_lines(opt['data_path'], source_domain)
     target_examples = read_lines(opt['data_path'], target_domain)
 
-    val_split_length = source_total_examples * 0.2 # 20% of the training split used for validation
-    test_split_length= source_total_examples * 0.2
+    
 
     #SOURCE DOMAIN
     # Compute ratios of examples for each category
@@ -122,10 +121,14 @@ def build_splits_domain_disentangle(opt):
     source_total_examples = sum(source_category_ratios.values())
     source_category_ratios = {category_idx: c / source_total_examples for category_idx, c in source_category_ratios.items()}
 
+    val_split_length = source_total_examples * 0.2 # 20% of the training split used for validation
+    test_split_length= source_total_examples * 0.2
+
     # Build splits - we train only on the source domain (Art Painting)
     train_source_examples = []
     val_source_examples = []
     test_source_examples = []
+    
 
     for category_idx, examples_list in source_examples.items():
         split_idx1 = round(source_category_ratios[category_idx] * val_split_length)
@@ -143,6 +146,9 @@ def build_splits_domain_disentangle(opt):
     target_category_ratios = {category_idx: len(examples_list) for category_idx, examples_list in target_examples.items()}
     target_total_examples = sum(target_category_ratios.values())
     target_category_ratios = {category_idx: c / target_total_examples for category_idx, c in target_category_ratios.items()}
+
+    val_split_length = target_total_examples * 0.2 # 20% of the training split used for validation
+    test_split_length= target_total_examples * 0.2
 
     # Build splits - we train only on the source domain (Art Painting)
     train_target_examples = []
