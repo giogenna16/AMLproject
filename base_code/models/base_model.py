@@ -96,6 +96,8 @@ class DomainDisentangleModel(nn.Module):
 
     def forward(self, x, branch):
         x = self.feature_extractor(x)
+        if branch==-1:
+            return x
         if branch==0:#category disentanglement, phase1
             x= self.category_encoder(x) #disentangler D1
             x= self.category_classifier(x) 

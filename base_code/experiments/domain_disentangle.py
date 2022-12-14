@@ -53,33 +53,51 @@ class DomainDisentangleExperiment: # See point 2. of the project
         
 
     def train_iteration(self, data):
-        x, y = data
+        x, labels = data
+        y= labels[0] #category
+        z= labels[1] #domain
         x = x.to(self.device)
         y = y.to(self.device)
+        z=  z.to(self.device)
 
-        logits = self.model(x, 0)
-        loss0= self.criterion[0](logits, y)
+        fG = self.model(x, -1)
+
+        if y!= None:
+            logits = self.model(x, 0)
+            loss0 = self.criterion[0](logits, y)
+            #loss0.backward()
+            print(f"loss0 {loss0}")
+        else:
+            loss0= 0
 
         logits = self.model(x, 1)
         loss1= self.criterion[1](logits)
+        #loss1.backward()
+        print(f"loss1 {loss1}")
 
         logits = self.model(x, 2)
-        loss2= self.criterion[2](logits, y)
+        loss2= self.criterion[2](logits, z) # domain label
+        #loss2.backward()
+        print(f"loss2 {loss2}")
 
         logits = self.model(x, 3)
         loss3= self.criterion[3](logits)
+        #loss3.backward()
+        print(f"loss3 {loss3}")
 
         logits = self.model(x, 4)
-        loss4= self.criterion[4](logits, y)
+        loss4= self.criterion[4](logits, fG)
+        #loss4.backward()
+        print(f"loss4 {loss4}")
 
         
         loss= W1 * (loss0 + ALPHA_ENTROPY * loss1) +  W2 * (loss2 + ALPHA_ENTROPY * loss3) + W3 * loss4
+        print(f"Final loss {loss}")
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         
         return loss.item()
-    
 
     def validate(self, loader):
         self.model.eval()
