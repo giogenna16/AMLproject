@@ -1,5 +1,5 @@
 import torch.nn as nn
-import torch.cat 
+from torch import cat 
 from torchvision.models import resnet18
 
 class FeatureExtractor(nn.Module):
@@ -111,7 +111,7 @@ class DomainDisentangleModel(nn.Module):
         else: #reconstruction
             fcs= self.category_encoder(x)
             fds= self.category_encoder(x)
-            x= torch.cat((fcs, fds)) #to concatenate (maybe put the dimension that should be 0)
+            x= cat((fcs, fds)) #to concatenate (maybe put the dimension that should be 0)
             x= self.reconstructor(x)
         return x
         

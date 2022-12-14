@@ -73,7 +73,7 @@ class DomainDisentangleExperiment: # See point 2. of the project
         loss4= self.criterion[4](logits, y)
 
         
-        loss= W1 * (loss0 + ALPHA_ENTROPY * loss1)+  W2 * (loss2 + ALPHA_ENTROPY * loss3) + W3 * loss4
+        loss= W1 * (loss0 + ALPHA_ENTROPY * loss1) +  W2 * (loss2 + ALPHA_ENTROPY * loss3) + W3 * loss4
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
