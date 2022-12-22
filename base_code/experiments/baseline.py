@@ -43,7 +43,7 @@ class BaselineExperiment: # See point 1. of the project
 
         return iteration, best_accuracy, total_train_loss
 
-    def train_iteration(self, data):
+    def train_iteration(self, data, **loss_acc_logger):
         x, y = data
         x = x.to(self.device)
         y = y.to(self.device)
@@ -57,7 +57,7 @@ class BaselineExperiment: # See point 1. of the project
         
         return loss.item()
 
-    def validate(self, loader, test=False):
+    def validate(self, loader, test=False, **loss_acc_logger):
         self.model.eval()
         accuracy = 0
         count = 0

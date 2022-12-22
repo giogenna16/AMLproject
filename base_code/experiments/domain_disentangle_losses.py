@@ -17,7 +17,7 @@ class NegHLoss(nn.Module):
         b = b.sum(dim=0) / x.size(0)  # we want to minimize the negative entropy
         # sum over the number of classes
         b = b.sum()
-        return b
+        return - b
 
 
 # Loss for the reconstructor

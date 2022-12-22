@@ -7,6 +7,7 @@ W1 = 0.8
 W2 = 0.8
 W3 = 0.001
 ALPHA_ENTROPY = 0.1
+# weight decay ?
 
 
 class DomainDisentangleExperiment:  # See point 2. of the project
@@ -36,6 +37,7 @@ class DomainDisentangleExperiment:  # See point 2. of the project
 
         # Setup of losses
         self.criterion = [torch.nn.CrossEntropyLoss(), NegHLoss(), torch.nn.CrossEntropyLoss(), NegHLoss(), ReconstructionLoss()]
+
 
 
     def save_checkpoint(self, path, iteration, best_accuracy, total_train_loss):
@@ -71,7 +73,7 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         self.optimizers['Dom_Enc'].load_state_dict(checkpoint['optimizer'][2])
         self.optimizers['Cat_Class'].load_state_dict(checkpoint['optimizer'][3])
         self.optimizers['Dom_Class'].load_state_dict(checkpoint['optimizer'][4])
-        self.optimizers['Recon'].load_state_dict(checkpoint['optimizer'][4])
+        self.optimizers['Recon'].load_state_dict(checkpoint['optimizer'][5])
 
         return iteration, best_accuracy, total_train_loss
 
@@ -86,7 +88,7 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         self.reset_gradient()
 
 
-    def train_iteration(self, data):
+    def train_iteration(self, data, **loss_acc_logger):
         src_img, category_labels, tgt_img, _ = data
         src_img = src_img.to(self.device)
         category_labels = category_labels.to(self.device)
@@ -104,7 +106,6 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         cat_classif_loss = W1 * self.criterion[0](logits, category_labels)
         cat_classif_loss.backward()
         self.optimize_step_on_optimizers(['Gen', 'Cat_Enc', 'Cat_Class'])
-        print(f"cat_classif_loss {cat_classif_loss}")
 
         # Confuse Domain Classifier (freeze DC)
         logits1 = self.model(src_img, 1)
@@ -112,7 +113,6 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         dc_confusion_loss = W1 * self.criterion[1](cat((logits1, logits2), dim=1)) * ALPHA_ENTROPY
         dc_confusion_loss.backward()
         self.optimize_step_on_optimizers(['Gen', 'Cat_Enc'])
-        print(f"dc_confusion_loss {dc_confusion_loss}")
 
 
         # DOMAIN DISENTANGLEMENT
@@ -127,7 +127,6 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         dom_classif_loss = W2 * self.criterion[2](cat((logits1, logits2), dim=0), cat((src_dom_label, tgt_dom_label), dim=0))
         dom_classif_loss.backward()
         self.optimize_step_on_optimizers(['Gen', 'Dom_Enc', 'Dom_Class'])
-        print(f"dom_classif_loss {dom_classif_loss}")
 
         # Confuse Category Classifier
         logits1 = self.model(src_img, 3)
@@ -135,7 +134,6 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         c_confusion_loss = W2 * self.criterion[3](cat((logits1, logits2), dim=1)) * ALPHA_ENTROPY
         c_confusion_loss.backward()
         self.optimize_step_on_optimizers(['Gen', 'Dom_Enc'])
-        print(f"c_confusion_loss {c_confusion_loss}")
 
 
         # RECONSTRUCTION
@@ -149,19 +147,20 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         reconstruction_loss = (loss4a + loss4b) / 2 * W3  # is this the correct way??
         reconstruction_loss.backward()
         self.optimize_step_on_optimizers(['Gen', 'Cat_Enc', 'Dom_Enc', 'Recon'])
-        print(f"reconstruction_loss {reconstruction_loss}")
 
-        #print(f"{cat((logits1, logits2), dim=0).shape}, -- {cat((fG_src, fG_tgt), dim=0).shape}")
-        #loss4_second = self.criterion[4](cat((logits1, logits2), dim=0), cat((fG_src, fG_tgt), dim=0))
-        #print(f"loss4_second {loss4_second}")
-        
         loss = cat_classif_loss + dc_confusion_loss + dom_classif_loss + c_confusion_loss + reconstruction_loss
-        print(f"Final loss {loss}")
+
+        loss_acc_logger['loss_log']['cat_classif_loss'] += cat_classif_loss
+        loss_acc_logger['loss_log']['dc_confusion_entr_loss'] += dc_confusion_loss
+        loss_acc_logger['loss_log']['dom_classif_loss'] += dom_classif_loss
+        loss_acc_logger['loss_log']['c_confusion_entr_loss'] += c_confusion_loss
+        loss_acc_logger['loss_log']['total_loss'] += reconstruction_loss
+        loss_acc_logger['train_counter'] += 1
 
         return loss.item()
 
 
-    def validate(self, loader, test=False):
+    def validate(self, loader, test=False, **loss_acc_logger):
         self.model.eval()
         category_accuracy = 0
         category_count = 0
@@ -235,7 +234,21 @@ class DomainDisentangleExperiment:  # See point 2. of the project
 
                 loss += cat_classif_loss + dc_confusion_loss + dom_classif_loss + c_confusion_loss + reconstruction_loss
 
+
+
         mean_accuracy = category_accuracy / category_count
         mean_loss = loss / category_count
+        mean_domain_acc = domain_accuracy / domain_count
+
+        loss_acc_logger['loss_log_val']['cat_classif_loss'] += cat_classif_loss
+        loss_acc_logger['loss_log_val']['dc_confusion_entr_loss'] += dc_confusion_loss
+        loss_acc_logger['loss_log_val']['dom_classif_loss'] += dom_classif_loss
+        loss_acc_logger['loss_log_val']['c_confusion_entr_loss'] += c_confusion_loss
+        loss_acc_logger['loss_log_val']['total_loss'] += mean_loss
+
+        loss_acc_logger['acc_logger']['cat_classif_acc'] += mean_accuracy
+        loss_acc_logger['acc_logger']['dom_classif_acc'] += mean_domain_acc
+        loss_acc_logger['val_counter'] += 1
+
         self.model.train()
         return mean_accuracy, mean_loss
