@@ -57,7 +57,7 @@ class BaselineExperiment: # See point 1. of the project
         
         return loss.item()
 
-    def validate(self, loader):
+    def validate(self, loader, test=False):
         self.model.eval()
         accuracy = 0
         count = 0

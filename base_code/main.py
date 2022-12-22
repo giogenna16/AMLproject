@@ -62,7 +62,7 @@ def main(opt):
 
     # Test
     experiment.load_checkpoint(f'{opt["output_path"]}/best_checkpoint.pth')
-    test_accuracy, _ = experiment.validate(test_loader)
+    test_accuracy, _ = experiment.validate(test_loader, test=True)
     logging.info(f'[TEST] Accuracy: {(100 * test_accuracy):.2f}')
 
 if __name__ == '__main__':
