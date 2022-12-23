@@ -154,7 +154,8 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         loss_acc_logger['loss_log']['dc_confusion_entr_loss'] += dc_confusion_loss
         loss_acc_logger['loss_log']['dom_classif_loss'] += dom_classif_loss
         loss_acc_logger['loss_log']['c_confusion_entr_loss'] += c_confusion_loss
-        loss_acc_logger['loss_log']['total_loss'] += reconstruction_loss
+        loss_acc_logger['loss_log']['reconstr_loss'] += reconstruction_loss
+        loss_acc_logger['loss_log']['total_loss'] += loss
         loss_acc_logger['train_counter'] += 1
 
         return loss.item()
@@ -244,6 +245,7 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         loss_acc_logger['loss_log_val']['dc_confusion_entr_loss'] += dc_confusion_loss
         loss_acc_logger['loss_log_val']['dom_classif_loss'] += dom_classif_loss
         loss_acc_logger['loss_log_val']['c_confusion_entr_loss'] += c_confusion_loss
+        loss_acc_logger['loss_log_val']['reconstr_loss'] += reconstruction_loss
         loss_acc_logger['loss_log_val']['total_loss'] += mean_loss
 
         loss_acc_logger['acc_logger']['cat_classif_acc'] += mean_accuracy
