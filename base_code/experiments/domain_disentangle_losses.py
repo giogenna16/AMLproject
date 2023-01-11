@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.linalg as linalg
+import torch
 
 
 
@@ -12,7 +13,7 @@ class NegHLoss(nn.Module):
     # Mathematical definition given in the paper
     def forward(self, x):
         # get probabilities of logits to avoid numerical issues
-        b = F.log_softmax(x + 1e-6, dim=1)
+        b = F.log_softmax(x + 1e-6, dim=1) #* F.softmax(x + 1e-6, dim=1)
         # sum over the number of samples of given class and compute mean
         b = b.sum(dim=0) / x.size(0)  # we want to minimize the negative entropy
         # sum over the number of classes
@@ -37,3 +38,12 @@ class ReconstructionLoss(nn.Module):
 
         return output1 + output2
 
+
+# "we minimize the classifier prediction
+# uncertainty through the empirical entropy loss" Domain Generalization Paper
+# Re-adapted and returned the negative
+def dom_generalization_entropy_loss(x):
+    return torch.sum(-F.softmax(x + 1e-6, dim=1) * F.log_softmax(x + 1e-6, dim=1), dim=1).mean()
+
+def _entr_DAL(x):
+    return - torch.mean(torch.log(F.softmax(x + 1e-6, dim=-1)))

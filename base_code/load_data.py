@@ -2,6 +2,11 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as T
 
+
+import torch
+from utils.reproducibility import make_it_reproducible, seed_worker
+
+
 CATEGORIES = {
     'dog': 0,
     'elephant': 1,
@@ -48,7 +53,7 @@ class PACSDatasetDisentangle(Dataset):
         src_img = self.transform(Image.open(src_img_path).convert('RGB'))
 
         tgt_img_path, tgt_category_label = self.tgt_examples[index % self.__len__()]
-        tgt_img = self.transform(Image.open(src_img_path).convert('RGB'))
+        tgt_img = self.transform(Image.open(tgt_img_path).convert('RGB'))
 
         return src_img, category_label, tgt_img, tgt_category_label
 
@@ -71,6 +76,13 @@ def read_lines(data_path, domain_name):
     return examples
 
 def build_splits_baseline(opt):
+
+    # reproducibility
+    seed = 0
+    g = torch.Generator()
+    make_it_reproducible(seed)
+    g.manual_seed(seed)
+
     source_domain = 'art_painting'
     target_domain = opt['target_domain']
 
@@ -120,13 +132,20 @@ def build_splits_baseline(opt):
     ])
 
     # Dataloaders
-    train_loader = DataLoader(PACSDatasetBaseline(train_examples, train_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=True)
-    val_loader = DataLoader(PACSDatasetBaseline(val_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False)
-    test_loader = DataLoader(PACSDatasetBaseline(test_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False)
+    train_loader = DataLoader(PACSDatasetBaseline(train_examples, train_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=True, worker_init_fn=seed_worker, generator=g)
+    val_loader = DataLoader(PACSDatasetBaseline(val_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False, worker_init_fn=seed_worker, generator=g)
+    test_loader = DataLoader(PACSDatasetBaseline(test_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False, worker_init_fn=seed_worker, generator=g)
 
     return train_loader, val_loader, test_loader
 
 def build_splits_domain_disentangle(opt):
+
+    # reproducibility
+    seed = 0
+    g = torch.Generator()
+    make_it_reproducible(seed)
+    g.manual_seed(seed)
+
     source_domain = 'art_painting'
     target_domain = opt['target_domain']
 
@@ -201,11 +220,37 @@ def build_splits_domain_disentangle(opt):
     ])
 
     # Dataloaders
-    train_loader = DataLoader(PACSDatasetDisentangle(train_source_examples, train_target_examples, train_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=True)
-    val_loader = DataLoader(PACSDatasetDisentangle(val_source_examples, val_target_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False)
-    test_loader = DataLoader(PACSDatasetDisentangle(test_source_examples, test_target_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False)
+    train_loader = DataLoader(PACSDatasetDisentangle(train_source_examples, train_target_examples, train_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=True, worker_init_fn=seed_worker, generator=g)
+    val_loader = DataLoader(PACSDatasetDisentangle(val_source_examples, val_target_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False, worker_init_fn=seed_worker, generator=g)
+    test_loader = DataLoader(PACSDatasetDisentangle(test_source_examples, test_target_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False, worker_init_fn=seed_worker, generator=g)
     
     return train_loader, val_loader, test_loader
 
 def build_splits_clip_disentangle(opt):
     raise NotImplementedError('[TODO] Implement build_splits_clip_disentangle') #TODO
+
+
+def get_target_data(opt):
+    target_domain = opt['target_domain']
+    target_examples = read_lines(opt['data_path'], target_domain)
+
+    test_examples = []
+    for category_idx, examples_list in target_examples.items():
+        for example in examples_list:
+            test_examples.append([example, category_idx])  # each pair is [path_to_img, class_label]
+
+    # Transforms
+    normalize = T.Normalize([0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ResNet18 - ImageNet Normalization
+
+    eval_transform = T.Compose([
+        T.Resize(256),
+        T.CenterCrop(224),
+        T.ToTensor(),
+        normalize
+    ])
+
+    # Dataloaders
+    test_loader = DataLoader(PACSDatasetBaseline(test_examples, eval_transform), batch_size=opt['batch_size'],
+                             num_workers=opt['num_workers'], shuffle=False)
+
+    return test_loader

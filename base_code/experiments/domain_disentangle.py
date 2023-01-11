@@ -2,12 +2,23 @@ import torch
 from torch import cat
 from models.base_model import DomainDisentangleModel
 from experiments.domain_disentangle_losses import *
+import wandb
 
-W1 = 0.8
-W2 = 0.8
+W1 = 0.99
+W2 = 0.099
 W3 = 0.001
-ALPHA_ENTROPY = 0.1
+ALPHA_ENTROPY = 0.7
+tgt_dom = 'photo'
 # weight decay ?
+
+config = {
+    'w1': W1,
+    'w2': W2,
+    'w3': W3,
+    'alpha_entropy': ALPHA_ENTROPY,
+    'target_domain': tgt_dom,
+}
+wandb.init(project='aml_project', notes='domain_disentangle', config=config)
 
 
 class DomainDisentangleExperiment:  # See point 2. of the project
@@ -24,6 +35,9 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         for param in self.model.parameters():
             param.requires_grad = True
 
+        # Warmup counter
+        self.warmup_counter = 0
+
         # Setup optimization procedure
         # define one optimizer for each module in the architecture
         self.optimizers = {
@@ -38,6 +52,9 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         # Setup of losses
         self.criterion = [torch.nn.CrossEntropyLoss(), NegHLoss(), torch.nn.CrossEntropyLoss(), NegHLoss(), ReconstructionLoss()]
 
+        # Setup gradient logging with wandb
+        wandb.watch(self.model, log_freq=100)
+        self.config = wandb.config
 
 
     def save_checkpoint(self, path, iteration, best_accuracy, total_train_loss):
@@ -82,6 +99,7 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         for opt in self.optimizers.values():
             opt.zero_grad()
 
+
     def optimize_step_on_optimizers(self, optim_key_list):
         for k in optim_key_list:
             self.optimizers[k].step()
@@ -99,20 +117,45 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         # Reset all optimizers
         self.reset_gradient()
 
+        # WARMUP: Train the category classifier and the domain classifier alternatively
+        if self.warmup_counter < 1000:
+            self.warmup_counter += 1
+
+            # Train Category Classifier
+            logits = self.model(src_img, 0)
+            cat_classif_loss = self.criterion[0](logits, category_labels)
+            cat_classif_loss.backward()
+            self.optimize_step_on_optimizers(['Cat_Enc', 'Cat_Class'])
+
+            # Train Domain Classifier
+            logits1 = self.model(src_img, 2)
+            # create tensor with scr_domain label = 0
+            src_dom_label = torch.full((batch_size,), fill_value=0, device=self.device)
+            logits2 = self.model(tgt_img, 2)
+            # create tensor with tgt_domain label = 1
+            tgt_dom_label = torch.full((batch_size,), fill_value=1, device=self.device)
+            dom_classif_loss = self.criterion[2](cat((logits1, logits2), dim=0),
+                                                 cat((src_dom_label, tgt_dom_label), dim=0))
+            dom_classif_loss.backward()
+            self.optimize_step_on_optimizers(['Dom_Enc', 'Dom_Class'])
+            return cat_classif_loss.item() + dom_classif_loss.item()
+
+        if self.warmup_counter == 1000:
+            print("Finished warmup")
 
         # CATEGORY DISENTANGLEMENT
         # Train Category Classifier
         logits = self.model(src_img, 0)
-        cat_classif_loss = W1 * self.criterion[0](logits, category_labels)
+        cat_classif_loss = self.config.w1 * self.criterion[0](logits, category_labels)
         cat_classif_loss.backward()
         self.optimize_step_on_optimizers(['Gen', 'Cat_Enc', 'Cat_Class'])
 
         # Confuse Domain Classifier (freeze DC)
         logits1 = self.model(src_img, 1)
         logits2 = self.model(tgt_img, 1)
-        dc_confusion_loss = W1 * self.criterion[1](cat((logits1, logits2), dim=1)) * ALPHA_ENTROPY
+        dc_confusion_loss = self.config.w1 * self.criterion[1](cat((logits1, logits2), dim=1)) * self.config.alpha_entropy
         dc_confusion_loss.backward()
-        self.optimize_step_on_optimizers(['Gen', 'Cat_Enc'])
+        self.optimize_step_on_optimizers(['Cat_Enc'])
 
 
         # DOMAIN DISENTANGLEMENT
@@ -124,16 +167,18 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         logits2 = self.model(tgt_img, 2)
         # create tensor with tgt_domain label = 1
         tgt_dom_label = torch.full((batch_size,), fill_value=1, device=self.device)
-        dom_classif_loss = W2 * self.criterion[2](cat((logits1, logits2), dim=0), cat((src_dom_label, tgt_dom_label), dim=0))
+
+        dom_classif_loss = self.config.w2 * self.criterion[2](cat((logits1, logits2), dim=0),
+                                                              cat((src_dom_label, tgt_dom_label), dim=0))
         dom_classif_loss.backward()
         self.optimize_step_on_optimizers(['Gen', 'Dom_Enc', 'Dom_Class'])
 
         # Confuse Category Classifier
         logits1 = self.model(src_img, 3)
         logits2 = self.model(tgt_img, 3)
-        c_confusion_loss = W2 * self.criterion[3](cat((logits1, logits2), dim=1)) * ALPHA_ENTROPY
+        c_confusion_loss = self.config.w2 * self.criterion[3](cat((logits1, logits2), dim=1)) * self.config.alpha_entropy
         c_confusion_loss.backward()
-        self.optimize_step_on_optimizers(['Gen', 'Dom_Enc'])
+        self.optimize_step_on_optimizers(['Dom_Enc'])
 
 
         # RECONSTRUCTION
@@ -144,11 +189,14 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         loss4a = self.criterion[4](logits1, fG_src)
         logits2 = self.model(tgt_img, 4)
         loss4b = self.criterion[4](logits2, fG_tgt)
-        reconstruction_loss = (loss4a + loss4b) / 2 * W3  # is this the correct way??
+        reconstruction_loss = (loss4a + loss4b) / 2 * self.config.w3
         reconstruction_loss.backward()
-        self.optimize_step_on_optimizers(['Gen', 'Cat_Enc', 'Dom_Enc', 'Recon'])
+        self.optimize_step_on_optimizers(['Cat_Enc', 'Dom_Enc', 'Recon'])
 
         loss = cat_classif_loss + dc_confusion_loss + dom_classif_loss + c_confusion_loss + reconstruction_loss
+
+        if self.warmup_counter % 50 == 0:
+            print(f"LOSSES: cat_class: {cat_classif_loss} | dom_class: {dom_classif_loss} | dom_confusion: {dom_classif_loss} | cat_confusion: {c_confusion_loss} | reconstr: {reconstruction_loss} || Total: {loss}")
 
         loss_acc_logger['loss_log']['cat_classif_loss'] += cat_classif_loss
         loss_acc_logger['loss_log']['dc_confusion_entr_loss'] += dc_confusion_loss
@@ -158,6 +206,16 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         loss_acc_logger['loss_log']['total_loss'] += loss
         loss_acc_logger['train_counter'] += 1
 
+        wandb.log({
+            'tr_cat_classif_loss': cat_classif_loss,
+            'tr_dc_confusion_entr_loss': dc_confusion_loss,
+            'tr_dom_classif_loss': dom_classif_loss,
+            'tr_c_confusion_entr_loss': c_confusion_loss,
+            'tr_reconstr_loss': reconstruction_loss,
+            'tr_total_loss': loss,
+        })
+
+        self.warmup_counter += 1
         return loss.item()
 
 
@@ -181,9 +239,9 @@ class DomainDisentangleExperiment:  # See point 2. of the project
                 fG_src = self.model(src_img, -1)
                 fG_tgt = self.model(tgt_img, -1)
 
-                # CATEGORY CLASSIFICATION (only on src_img)
+                # CATEGORY CLASSIFICATION (only on src_img during validation)
                 logits = self.model(src_img, 0)
-                cat_classif_loss1 = W1 * self.criterion[0](logits, category_labels)
+                cat_classif_loss1 = self.config.w1 * self.criterion[0](logits, category_labels)
                 pred = torch.argmax(logits, dim=-1)
                 category_accuracy += (pred == category_labels).sum().item()
                 category_count += src_img.size(0)
@@ -191,19 +249,19 @@ class DomainDisentangleExperiment:  # See point 2. of the project
                 # If testing check category label on target source too
                 if test:
                     logits = self.model(tgt_img, 0)
-                    cat_classif_loss2 = W1 * self.criterion[0](logits, tgt_category_labels)
+                    cat_classif_loss2 = self.config.w1 * self.criterion[0](logits, tgt_category_labels)
                     pred = torch.argmax(logits, dim=-1)
-                    category_accuracy += (pred == category_labels).sum().item()
-                    category_count += src_img.size(0)
+                    category_accuracy += (pred == tgt_category_labels).sum().item()
+                    category_count += tgt_img.size(0)
+                    cat_classif_loss = (cat_classif_loss1 + cat_classif_loss2) / 2
                 else:
-                    cat_classif_loss2 = 0
+                    cat_classif_loss = cat_classif_loss1
 
-                cat_classif_loss = (cat_classif_loss1 + cat_classif_loss2) / 2
 
                 # Confuse Domain Classifier
                 logits1 = self.model(src_img, 1)
                 logits2 = self.model(tgt_img, 1)
-                dc_confusion_loss = W1 * self.criterion[1](cat((logits1, logits2), dim=1)) * ALPHA_ENTROPY
+                dc_confusion_loss = self.config.w1 * self.criterion[1](cat((logits1, logits2), dim=1)) * self.config.alpha_entropy
 
                 # DOMAIN CLASSIFICATION
                 logits1 = self.model(src_img, 2)
@@ -218,20 +276,22 @@ class DomainDisentangleExperiment:  # See point 2. of the project
                 tgt_dom_label = torch.full((batch_size,), fill_value=1, device=self.device)
                 pred = torch.argmax(logits2, dim=-1)
                 domain_accuracy += (pred == tgt_dom_label).sum().item()
-                domain_count += src_img.size(0)
-                dom_classif_loss = W2 * self.criterion[2](cat((logits1, logits2), dim=0), cat((src_dom_label, tgt_dom_label), dim=0))
+                domain_count += tgt_img.size(0)
+                dom_classif_loss = self.config.w2 * self.criterion[2](cat((logits1, logits2), dim=0),
+                                                                      cat((src_dom_label, tgt_dom_label), dim=0))
+
 
                 # Confuse Category Classifier
                 logits1 = self.model(src_img, 3)
                 logits2 = self.model(tgt_img, 3)
-                c_confusion_loss = W2 * self.criterion[3](cat((logits1, logits2), dim=1)) * ALPHA_ENTROPY
+                c_confusion_loss = self.config.w2 * self.criterion[3](cat((logits1, logits2), dim=1)) * self.config.alpha_entropy
 
                 # RECONSTRUCTION
                 logits1 = self.model(src_img, 4)
                 loss4a = self.criterion[4](logits1, fG_src)
                 logits2 = self.model(tgt_img, 4)
                 loss4b = self.criterion[4](logits2, fG_tgt)
-                reconstruction_loss = (loss4a + loss4b) / 2 * W3  # is this the correct way??
+                reconstruction_loss = (loss4a + loss4b) / 2 * self.config.w3
 
                 loss += cat_classif_loss + dc_confusion_loss + dom_classif_loss + c_confusion_loss + reconstruction_loss
 
@@ -252,5 +312,41 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         loss_acc_logger['acc_logger']['dom_classif_acc'] += mean_domain_acc
         loss_acc_logger['val_counter'] += 1
 
+        wandb.log({
+            'val_cat_classif_loss': cat_classif_loss,
+            'val_dc_confusion_entr_loss': dc_confusion_loss,
+            'val_dom_classif_loss': dom_classif_loss,
+            'val_c_confusion_entr_loss': c_confusion_loss,
+            'val_reconstr_loss': reconstruction_loss,
+            'val_total_loss': mean_loss,
+            'cat_classif_acc': mean_accuracy,
+            'dom_classif_acc': mean_domain_acc
+        })
+
         self.model.train()
         return mean_accuracy, mean_loss
+
+    def test_on_target(self, loader):
+        print("testing on tgt only")
+        self.model.eval()
+        accuracy = 0
+        count = 0
+        loss = 0
+        with torch.no_grad():
+            for x, y in loader:
+                x = x.to(self.device)
+                y = y.to(self.device)
+
+                logits = self.model(x, 0)
+                loss += self.criterion[0](logits, y)
+                pred = torch.argmax(logits, dim=-1)
+
+                accuracy += (pred == y).sum().item()
+                count += x.size(0)
+
+        mean_accuracy = accuracy / count
+        mean_loss = loss / count
+        self.model.train()
+        print("acc = ", mean_accuracy)
+        return mean_accuracy, mean_loss
+
