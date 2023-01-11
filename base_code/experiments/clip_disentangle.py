@@ -167,6 +167,23 @@ class CLIPDisentangleExperiment: # See point 4. of the project
         self.optimize_step_on_optimizers(['Cat_Enc'])
 
 
+        # CLIP DISENTANGLEMENT
+        dom_features_src = self.model(src_img, 4)
+        dom_features_tgt = self.model(tgt_img, 4)
+
+        tokenized_text_src = clip.tokenize(src_img_description).to(self.device)
+        text_features_src = self.clip_model.encode_text(tokenized_text_src)
+        lossClip1 = self.criterion[5](dom_features_src, text_features_src)
+
+        tokenized_text_tgt = clip.tokenize(tgt_img_desciption).to(self.device)
+        text_features_tgt = self.clip_model.encode_text(tokenized_text_tgt)
+        lossClip2 = self.criterion[5](dom_features_tgt, text_features_tgt)
+
+        lossClip = (lossClip1 + lossClip2) * self.config.w2
+        lossClip.backward()
+        self.optimize_step_on_optimizers(['Dom_Enc'])
+
+
         # DOMAIN DISENTANGLEMENT
         # Train Domain Classifier
         logits1 = self.model(src_img, 2)
@@ -202,30 +219,14 @@ class CLIPDisentangleExperiment: # See point 4. of the project
         reconstruction_loss.backward()
         self.optimize_step_on_optimizers(['Cat_Enc', 'Dom_Enc', 'Recon'])
 
-        # Clip disentanglement
-        dom_features_src = self.model(src_img, 4)
-        dom_features_tgt = self.model(tgt_img, 4)
-
-        tokenized_text_src = clip.tokenize(src_img_description).to(self.device)
-        text_features_src = self.clip_model.encode_text(tokenized_text_src)
-        lossClip1 = self.criterion[5](dom_features_src, text_features_src)
-
-        tokenized_text_tgt = clip.tokenize(tgt_img_desciption).to(self.device)
-        text_features_tgt = self.clip_model.encode_text(tokenized_text_tgt)
-        lossClip2 = self.criterion[5](dom_features_tgt, text_features_tgt)
-
-        print(f"src_desc {src_img_description}\ntgt_descr {src_img_description}")
-        print(f"text_features_src shape {text_features_src.shape}\ndom_features_src shape {dom_features_src.shape}")
-        print(f"text_features_src {text_features_src}\ndom_features_src {dom_features_src}")
-
-        lossClip = (lossClip1 + lossClip2) * self.config.w2
-        print(f"LossClip {lossClip}")
-        lossClip.backward()
-        self.optimize_step_on_optimizers(['Dom_Enc'])
-
         loss = cat_classif_loss + dc_confusion_loss + dom_classif_loss + c_confusion_loss + reconstruction_loss + lossClip
 
         if self.warmup_counter % 50 == 0:
+            print(f"src_desc {src_img_description}\ntgt_descr {tgt_img_desciption}")
+            print(f"text_features_src shape {text_features_src.shape}\ndom_features_src shape {dom_features_src.shape}")
+            print(f"text_features_src {text_features_src}\ndom_features_src {dom_features_src}")
+            print(f"LossClip {lossClip}")
+
             print(f"LOSSES: cat_class: {cat_classif_loss} | dom_class: {dom_classif_loss} | dom_confusion: {dom_classif_loss} | cat_confusion: {c_confusion_loss} | reconstr: {reconstruction_loss} | clip: {lossClip}|| Total: {loss}")
 
         loss_acc_logger['loss_log']['cat_classif_loss'] += cat_classif_loss
