@@ -1,7 +1,7 @@
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as T
-
+import ast
 
 import torch
 from utils.reproducibility import make_it_reproducible, seed_worker
@@ -56,6 +56,39 @@ class PACSDatasetDisentangle(Dataset):
         tgt_img = self.transform(Image.open(tgt_img_path).convert('RGB'))
 
         return src_img, category_label, tgt_img, tgt_category_label
+
+
+class PACSDatasetClipDisentangle(Dataset):
+    def __init__(self, src_examples, tgt_examples, transform):
+        self.src_examples = src_examples
+        self.tgt_examples = tgt_examples
+        self.transform = transform
+        self.description_dict = {}
+
+        with open('./base_code/data/PACS/clip_descriptions.txt') as text_file:
+            text_data = text_file.read()
+
+        list_dict = ast.literal_eval(text_data)
+
+        for d in list_dict:
+            key = d['image_name']
+            item = d['descriptions']
+            self.description_dict[key] = item
+
+    def __len__(self):
+        return min(len(self.src_examples), len(self.tgt_examples))
+
+    def __getitem__(self, index):
+        src_img_path, category_label = self.src_examples[index % self.__len__()]
+        src_img = self.transform(Image.open(src_img_path).convert('RGB'))
+        src_description = self.description_dict['src_img_path'] if 'src_img_path' in self.description_dict else "source"
+
+        tgt_img_path, tgt_category_label = self.tgt_examples[index % self.__len__()]
+        tgt_img = self.transform(Image.open(tgt_img_path).convert('RGB'))
+        tgt_description = self.description_dict['tgt_img_path'] if 'tgt_im_path' in self.description_dict else "target"
+
+        return src_img, category_label, src_description, tgt_img, tgt_category_label, tgt_description
+
 
 
 def read_lines(data_path, domain_name):
@@ -227,7 +260,100 @@ def build_splits_domain_disentangle(opt):
     return train_loader, val_loader, test_loader
 
 def build_splits_clip_disentangle(opt):
-    raise NotImplementedError('[TODO] Implement build_splits_clip_disentangle') #TODO
+    # reproducibility
+    seed = 0
+    g = torch.Generator()
+    make_it_reproducible(seed)
+    g.manual_seed(seed)
+
+    source_domain = 'art_painting'
+    target_domain = opt['target_domain']
+
+    source_examples = read_lines(opt['data_path'], source_domain)
+    target_examples = read_lines(opt['data_path'], target_domain)
+
+    # SOURCE DOMAIN
+    # Compute ratios of examples for each category
+    source_category_ratios = {category_idx: len(examples_list) for category_idx, examples_list in
+                              source_examples.items()}
+    source_total_examples = sum(source_category_ratios.values())
+    source_category_ratios = {category_idx: c / source_total_examples for category_idx, c in
+                              source_category_ratios.items()}
+
+    val_split_length = source_total_examples * 0.4  # 20% of the training split used for validation and 20% for test
+
+    # Build splits - we train only on the source domain (Art Painting)
+    train_source_examples = []
+    val_source_examples = []
+    test_source_examples = []
+
+    for category_idx, examples_list in source_examples.items():
+        split_idx1 = round(source_category_ratios[category_idx] * val_split_length)
+        split_idx2 = split_idx1 // 2
+        for i, example in enumerate(examples_list):
+            if i > split_idx1:
+                train_source_examples.append([example, category_idx])  # each pair is [path_to_img, class_label]
+            elif split_idx2 <= i < split_idx1:
+                val_source_examples.append([example, category_idx])  # each pair is [path_to_img, class_label]
+            else:
+                test_source_examples.append([example, category_idx])  # each pair is [path_to_img, class_label]
+
+    # TARGET DOMAIN
+    # Compute ratios of examples for each category
+    target_category_ratios = {category_idx: len(examples_list) for category_idx, examples_list in
+                              target_examples.items()}
+    target_total_examples = sum(target_category_ratios.values())
+    target_category_ratios = {category_idx: c / target_total_examples for category_idx, c in
+                              target_category_ratios.items()}
+
+    val_split_length = target_total_examples * 0.4  # 20% of the training split used for validation and 20% for test
+
+    # Build splits - we train only on the source domain (Art Painting)
+    train_target_examples = []
+    val_target_examples = []
+    test_target_examples = []
+
+    for category_idx, examples_list in target_examples.items():
+        split_idx1 = round(target_category_ratios[category_idx] * val_split_length)
+        split_idx2 = split_idx1 // 2
+        for i, example in enumerate(examples_list):
+            if i > split_idx1:
+                train_target_examples.append([example, category_idx])  # each pair is [path_to_img, class_label]
+            elif split_idx2 <= i < split_idx1:
+                val_target_examples.append([example, category_idx])  # each pair is [path_to_img, class_label]
+            else:
+                test_target_examples.append([example, category_idx])  # each pair is [path_to_img, class_label]
+
+    # Transforms
+    normalize = T.Normalize([0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ResNet18 - ImageNet Normalization
+
+    train_transform = T.Compose([
+        T.Resize(256),
+        T.RandAugment(3, 15),
+        T.CenterCrop(224),
+        T.ToTensor(),
+        normalize
+    ])
+
+    eval_transform = T.Compose([
+        T.Resize(256),
+        T.CenterCrop(224),
+        T.ToTensor(),
+        normalize
+    ])
+
+    # Dataloaders
+    train_loader = DataLoader(PACSDatasetClipDisentangle(train_source_examples, train_target_examples, train_transform),
+                              batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=True,
+                              worker_init_fn=seed_worker, generator=g)
+    val_loader = DataLoader(PACSDatasetClipDisentangle(val_source_examples, val_target_examples, eval_transform),
+                            batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False,
+                            worker_init_fn=seed_worker, generator=g)
+    test_loader = DataLoader(PACSDatasetClipDisentangle(test_source_examples, test_target_examples, eval_transform),
+                             batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False,
+                             worker_init_fn=seed_worker, generator=g)
+
+    return train_loader, val_loader, test_loader
 
 
 def get_target_data(opt):
