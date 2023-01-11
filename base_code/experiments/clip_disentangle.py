@@ -121,6 +121,8 @@ class CLIPDisentangleExperiment: # See point 4. of the project
         category_labels = category_labels.to(self.device)
         tgt_img = tgt_img.to(self.device)
 
+        print(f"src_desc {src_img_description}\ntgt_descr {tgt_img_desciption}")
+
         batch_size = src_img.size(0)
 
         # Reset all optimizers
@@ -222,11 +224,6 @@ class CLIPDisentangleExperiment: # See point 4. of the project
         loss = cat_classif_loss + dc_confusion_loss + dom_classif_loss + c_confusion_loss + reconstruction_loss + lossClip
 
         if self.warmup_counter % 50 == 0:
-            print(f"src_desc {src_img_description}\ntgt_descr {tgt_img_desciption}")
-            print(f"text_features_src shape {text_features_src.shape}\ndom_features_src shape {dom_features_src.shape}")
-            print(f"text_features_src {text_features_src}\ndom_features_src {dom_features_src}")
-            print(f"LossClip {lossClip}")
-
             print(f"LOSSES: cat_class: {cat_classif_loss} | dom_class: {dom_classif_loss} | dom_confusion: {dom_classif_loss} | cat_confusion: {c_confusion_loss} | reconstr: {reconstruction_loss} | clip: {lossClip}|| Total: {loss}")
 
         loss_acc_logger['loss_log']['cat_classif_loss'] += cat_classif_loss

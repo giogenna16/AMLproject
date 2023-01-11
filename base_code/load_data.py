@@ -59,21 +59,22 @@ class PACSDatasetDisentangle(Dataset):
 
 
 class PACSDatasetClipDisentangle(Dataset):
-    def __init__(self, src_examples, tgt_examples, transform):
+    def __init__(self, src_examples, tgt_examples, transform, data_path):
         self.src_examples = src_examples
         self.tgt_examples = tgt_examples
         self.transform = transform
         self.description_dict = {}
 
-        with open('./base_code/data/PACS/clip_descriptions.txt') as text_file:
+        with open(f'{data_path}/clip_descriptions.txt') as text_file:
             text_data = text_file.read()
 
         list_dict = ast.literal_eval(text_data)
 
         for d in list_dict:
-            key = d['image_name']
+            key = f'{data_path}/kfold/{d["image_name"]}'
             item = d['descriptions']
             self.description_dict[key] = item
+
 
     def __len__(self):
         return min(len(self.src_examples), len(self.tgt_examples))
@@ -81,14 +82,13 @@ class PACSDatasetClipDisentangle(Dataset):
     def __getitem__(self, index):
         src_img_path, category_label = self.src_examples[index % self.__len__()]
         src_img = self.transform(Image.open(src_img_path).convert('RGB'))
-        src_description = self.description_dict['src_img_path'] if 'src_img_path' in self.description_dict else "source"
+        src_description = self.description_dict[src_img_path] if src_img_path in self.description_dict else "source"
 
         tgt_img_path, tgt_category_label = self.tgt_examples[index % self.__len__()]
         tgt_img = self.transform(Image.open(tgt_img_path).convert('RGB'))
-        tgt_description = self.description_dict['tgt_img_path'] if 'tgt_im_path' in self.description_dict else "target"
+        tgt_description = self.description_dict[tgt_img_path] if tgt_img_path in self.description_dict else "target"
 
         return src_img, category_label, src_description, tgt_img, tgt_category_label, tgt_description
-
 
 
 def read_lines(data_path, domain_name):
@@ -343,13 +343,13 @@ def build_splits_clip_disentangle(opt):
     ])
 
     # Dataloaders
-    train_loader = DataLoader(PACSDatasetClipDisentangle(train_source_examples, train_target_examples, train_transform),
+    train_loader = DataLoader(PACSDatasetClipDisentangle(train_source_examples, train_target_examples, train_transform, opt['data_path']),
                               batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=True,
                               worker_init_fn=seed_worker, generator=g)
-    val_loader = DataLoader(PACSDatasetClipDisentangle(val_source_examples, val_target_examples, eval_transform),
+    val_loader = DataLoader(PACSDatasetClipDisentangle(val_source_examples, val_target_examples, eval_transform, opt['data_path']),
                             batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False,
                             worker_init_fn=seed_worker, generator=g)
-    test_loader = DataLoader(PACSDatasetClipDisentangle(test_source_examples, test_target_examples, eval_transform),
+    test_loader = DataLoader(PACSDatasetClipDisentangle(test_source_examples, test_target_examples, eval_transform, opt['data_path']),
                              batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False,
                              worker_init_fn=seed_worker, generator=g)
 
