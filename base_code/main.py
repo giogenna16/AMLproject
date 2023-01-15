@@ -1,7 +1,7 @@
 import os
 import logging
 from parse_args import parse_arguments
-from load_data import build_splits_baseline, build_splits_domain_disentangle, build_splits_clip_disentangle, get_target_data
+from load_data import build_splits_baseline, build_splits_domain_disentangle, build_splits_clip_disentangle, build_splits_domain_generalization_clip, get_target_data
 from experiments.baseline import BaselineExperiment
 from experiments.domain_disentangle import DomainDisentangleExperiment
 from experiments.clip_disentangle import CLIPDisentangleExperiment
@@ -19,7 +19,10 @@ def setup_experiment(opt):
 
     elif opt['experiment'] == 'clip_disentangle':
         experiment = CLIPDisentangleExperiment(opt)
-        train_loader, validation_loader, test_loader = build_splits_clip_disentangle(opt)
+        if not opt['domain_generalization']:
+            train_loader, validation_loader, test_loader = build_splits_clip_disentangle(opt)
+        else:
+            train_loader, validation_loader, test_loader = build_splits_domain_generalization_clip(opt)
 
     else:
         raise ValueError('Experiment not yet supported.')
@@ -76,6 +79,11 @@ def main(opt):
         while iteration < opt['max_iterations']:
             for data in train_loader:
 
+                # Plot tSNE features only for domain disentanglement (with or w/o Clip)
+                if (not opt['experiment'] == 'baseline' and not opt['domain_generalization']) and iteration % 1000 == 0:
+                    branch = -1 if iteration == 0 else 0
+                    experiment.tSNE_plot(train_loader, extract_features_branch=branch, iter=iteration, base_path=opt['output_path'])
+
                 total_train_loss += experiment.train_iteration(data, **loss_acc_logger)
 
                 if iteration % opt['print_every'] == 0:
@@ -105,13 +113,16 @@ def main(opt):
 
     # Test
     experiment.load_checkpoint(f'{opt["output_path"]}/last_checkpoint.pth')
-    test_accuracy, _ = experiment.validate(test_loader, test=True, **loss_acc_logger)
-    logging.info(f'[TEST] Accuracy: {(100 * test_accuracy):.2f}')
 
-    # Test on Target Only
-    test_tgt_only_loader = get_target_data(opt)
-    test_accuracy, _ = experiment.test_on_target(test_tgt_only_loader)
-    logging.info(f'[TEST TARGET] Accuracy: {(100 * test_accuracy):.2f}')
+    if not opt['domain_generalization']:
+        test_accuracy, _ = experiment.validate(test_loader, test=True, **loss_acc_logger)
+        logging.info(f'[TEST] Accuracy: {(100 * test_accuracy):.2f}')
+
+    # Test on Target Only if not baseline
+    if not opt['experiment'] == 'baseline':
+        test_tgt_only_loader = get_target_data(opt)
+        test_accuracy, _ = experiment.test_on_target(test_tgt_only_loader)
+        logging.info(f'[TEST TARGET] Accuracy: {(100 * test_accuracy):.2f}')
 
 if __name__ == '__main__':
 
