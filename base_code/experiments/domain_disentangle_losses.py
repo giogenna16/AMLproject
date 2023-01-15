@@ -1,8 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.linalg as linalg
-
-
+import torch
 
 # Loss to mininize the negative entropy
 class NegHLoss(nn.Module):
@@ -12,7 +11,7 @@ class NegHLoss(nn.Module):
     # Mathematical definition given in the paper
     def forward(self, x):
         # get probabilities of logits to avoid numerical issues
-        b = F.log_softmax(x + 1e-6, dim=1)
+        b = F.log_softmax(x + 1e-6, dim=1) #* F.softmax(x + 1e-6, dim=1)
         # sum over the number of samples of given class and compute mean
         b = b.sum(dim=0) / x.size(0)  # we want to minimize the negative entropy
         # sum over the number of classes
@@ -36,4 +35,3 @@ class ReconstructionLoss(nn.Module):
         output2 = kl_loss(log_x, log_y)  # this is the second term
 
         return output1 + output2
-

@@ -5,6 +5,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--experiment', type=str, default='baseline', choices=['baseline', 'domain_disentangle', 'clip_disentangle'])
+    parser.add_argument('--domain_generalization', action='store_true')
 
     parser.add_argument('--target_domain', type=str, default='cartoon', choices=['art_painting', 'cartoon', 'sketch', 'photo'])
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate.')
@@ -29,6 +30,9 @@ def parse_arguments():
     if not opt['cpu']:
         assert torch.cuda.is_available(), 'You need a CUDA capable device in order to run this experiment. See `--cpu` flag.'
 
-    opt['output_path'] = f'{opt["output_path"]}/record/{opt["experiment"]}_{opt["target_domain"]}'
+    if not opt['domain_generalization']:
+        opt['output_path'] = f'{opt["output_path"]}/record/{opt["experiment"]}_{opt["target_domain"]}'
+    else:
+        opt['output_path'] = f'{opt["output_path"]}/record/domain_generalization/{opt["experiment"]}_{opt["target_domain"]}'
 
     return opt
