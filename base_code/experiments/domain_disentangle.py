@@ -489,3 +489,4 @@ class DomainDisentangleExperiment:  # See point 2. of the project
                    fontsize=6)
         #plt.show()
         plt.savefig(f'{base_path}_tSNE_at_iter_{iter}.png')
+        plt.clf()

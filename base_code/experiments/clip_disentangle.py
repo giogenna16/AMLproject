@@ -187,7 +187,7 @@ class CLIPDisentangleExperiment: # See point 4. of the project
             self.reset_gradient()
 
             # WARMUP: Train the category classifier and the domain classifier alternatively
-            if self.warmup_counter < 1:
+            if self.warmup_counter < 1200:
                 self.warmup_counter += 1
 
                 # Train Category Classifier
@@ -209,7 +209,7 @@ class CLIPDisentangleExperiment: # See point 4. of the project
                 self.optimize_step_on_optimizers(['Dom_Enc', 'Dom_Class'])
                 return cat_classif_loss.item() + dom_classif_loss.item()
 
-            if self.warmup_counter == 1:
+            if self.warmup_counter == 1200:
                 print("Finished warmup")
 
             # CATEGORY DISENTANGLEMENT
@@ -540,3 +540,4 @@ class CLIPDisentangleExperiment: # See point 4. of the project
                    fontsize=6)
         # plt.show()
         plt.savefig(f'{base_path}_tSNE_at_iter_{iter}.png')
+        plt.clf()
