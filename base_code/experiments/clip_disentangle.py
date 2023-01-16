@@ -224,7 +224,7 @@ class CLIPDisentangleExperiment: # See point 4. of the project
             logits2 = self.model(tgt_img, 1)
             dc_confusion_loss = self.config.w1 * self.criterion[1](cat((logits1, logits2), dim=1)) * self.config.alpha_entropy
             dc_confusion_loss.backward()
-            self.optimize_step_on_optimizers(['Cat_Enc'])
+            self.optimize_step_on_optimizers(['Gen', 'Cat_Enc'])
 
 
             # CLIP DISENTANGLEMENT
@@ -261,7 +261,7 @@ class CLIPDisentangleExperiment: # See point 4. of the project
             logits2 = self.model(tgt_img, 3)
             c_confusion_loss = self.config.w2 * self.criterion[3](cat((logits1, logits2), dim=1)) * self.config.alpha_entropy
             c_confusion_loss.backward()
-            self.optimize_step_on_optimizers(['Dom_Enc'])
+            self.optimize_step_on_optimizers(['Gen', 'Dom_Enc'])
 
 
             # RECONSTRUCTION
@@ -274,7 +274,7 @@ class CLIPDisentangleExperiment: # See point 4. of the project
             loss4b = self.criterion[4](logits2, fG_tgt)
             reconstruction_loss = (loss4a + loss4b) / 2 * self.config.w3
             reconstruction_loss.backward()
-            self.optimize_step_on_optimizers(['Cat_Enc', 'Dom_Enc', 'Recon'])
+            self.optimize_step_on_optimizers(['Gen', 'Cat_Enc', 'Dom_Enc', 'Recon'])
 
         loss = cat_classif_loss + dc_confusion_loss + dom_classif_loss + c_confusion_loss + reconstruction_loss + lossClip
 

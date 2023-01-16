@@ -178,7 +178,7 @@ class DomainDisentangleExperiment:  # See point 2. of the project
                     logits = self.model(src_img, 0)
                     cat_classif_loss = self.criterion[0](logits, category_labels)
                     cat_classif_loss.backward()
-                    self.optimize_step_on_optimizers(['Gen', 'Cat_Enc', 'Cat_Class'])
+                    self.optimize_step_on_optimizers(['Cat_Enc', 'Cat_Class'])
                     return cat_classif_loss.item()
 
                 # Train Domain Classifier
@@ -191,7 +191,7 @@ class DomainDisentangleExperiment:  # See point 2. of the project
                 dom_classif_loss = self.criterion[2](cat((logits1, logits2), dim=0),
                                                      cat((src_dom_label, tgt_dom_label), dim=0))
                 dom_classif_loss.backward()
-                self.optimize_step_on_optimizers(['Gen', 'Dom_Enc', 'Dom_Class'])
+                self.optimize_step_on_optimizers(['Dom_Enc', 'Dom_Class'])
 
                 return dom_classif_loss.item()
 
@@ -210,7 +210,7 @@ class DomainDisentangleExperiment:  # See point 2. of the project
             logits2 = self.model(tgt_img, 1)
             dc_confusion_loss = self.config.w1 * self.criterion[1](cat((logits1, logits2), dim=1)) * self.config.alpha_entropy
             dc_confusion_loss.backward()
-            self.optimize_step_on_optimizers(['Cat_Enc'])
+            self.optimize_step_on_optimizers(['Gen', 'Cat_Enc'])
 
 
             # DOMAIN DISENTANGLEMENT
@@ -233,7 +233,7 @@ class DomainDisentangleExperiment:  # See point 2. of the project
             logits2 = self.model(tgt_img, 3)
             c_confusion_loss = self.config.w2 * self.criterion[3](cat((logits1, logits2), dim=1)) * self.config.alpha_entropy
             c_confusion_loss.backward()
-            self.optimize_step_on_optimizers(['Dom_Enc'])
+            self.optimize_step_on_optimizers(['Gen', 'Dom_Enc'])
 
 
             # RECONSTRUCTION
@@ -246,7 +246,7 @@ class DomainDisentangleExperiment:  # See point 2. of the project
             loss4b = self.criterion[4](logits2, fG_tgt)
             reconstruction_loss = (loss4a + loss4b) / 2 * self.config.w3
             reconstruction_loss.backward()
-            self.optimize_step_on_optimizers(['Cat_Enc', 'Dom_Enc', 'Recon'])
+            self.optimize_step_on_optimizers(['Gen', 'Cat_Enc', 'Dom_Enc', 'Recon'])
 
         loss = cat_classif_loss + dc_confusion_loss + dom_classif_loss + c_confusion_loss + reconstruction_loss
 
