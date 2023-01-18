@@ -245,7 +245,7 @@ def build_splits_domain_disentangle(opt):
         source_total_examples = sum(source_category_ratios.values())
         source_category_ratios = {category_idx: c / source_total_examples for category_idx, c in source_category_ratios.items()}
 
-        val_split_length = source_total_examples * 0.4  # 20% of the training split used for validation and 20% for test
+        val_split_length = source_total_examples * 0.1  # 5% of the training split used for validation and 5% for test
 
         # Build splits - we train only on the source domain (Art Painting)
         train_source_examples = []
@@ -269,7 +269,7 @@ def build_splits_domain_disentangle(opt):
         target_total_examples = sum(target_category_ratios.values())
         target_category_ratios = {category_idx: c / target_total_examples for category_idx, c in target_category_ratios.items()}
 
-        val_split_length = target_total_examples * 0.4  # 20% of the training split used for validation and 20% for test
+        val_split_length = target_total_examples * 0.1  # 5% of the training split used for validation and 5% for test
 
         # Build splits - we train only on the source domain (Art Painting)
         train_target_examples = []
@@ -328,7 +328,7 @@ def build_splits_clip_disentangle(opt):
     source_category_ratios = {category_idx: c / source_total_examples for category_idx, c in
                               source_category_ratios.items()}
 
-    val_split_length = source_total_examples * 0.4  # 20% of the training split used for validation and 20% for test
+    val_split_length = source_total_examples * 0.1  # 20% of the training split used for validation and 20% for test
 
     # Build splits - we train only on the source domain (Art Painting)
     train_source_examples = []
@@ -354,7 +354,7 @@ def build_splits_clip_disentangle(opt):
     target_category_ratios = {category_idx: c / target_total_examples for category_idx, c in
                               target_category_ratios.items()}
 
-    val_split_length = target_total_examples * 0.4  # 20% of the training split used for validation and 20% for test
+    val_split_length = target_total_examples * 0.1  # 5% of the training split used for validation and 5% for test
 
     # Build splits - we train only on the source domain (Art Painting)
     train_target_examples = []
@@ -438,7 +438,7 @@ def build_splits_domain_generalization(opt):
                               source_category_ratios.items()}
 
     # Build splits - we train only on the source domain (Art Painting)
-    val_split_length = source_total_examples * 0.2  # 20% of the training split used for validation
+    val_split_length = source_total_examples * 0.1  # 10% of the training split used for validation
 
     train_examples = []
     val_examples = []
@@ -532,7 +532,7 @@ def build_splits_domain_generalization_clip(opt):
                               source_category_ratios.items()}
 
     # Build splits - we train only on the source domain (Art Painting)
-    val_split_length = source_total_examples * 0.2  # 20% of the training split used for validation
+    val_split_length = source_total_examples * 0.1  # 10% of the training split used for validation
 
     train_examples = []
     val_examples = []

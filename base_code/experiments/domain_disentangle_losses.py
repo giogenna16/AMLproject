@@ -11,12 +11,12 @@ class NegHLoss(nn.Module):
     # Mathematical definition given in the paper
     def forward(self, x):
         # get probabilities of logits to avoid numerical issues
-        b = F.log_softmax(x + 1e-6, dim=1) #* F.softmax(x + 1e-6, dim=1)
+        b = F.log_softmax(x + 1e-6, dim=1) * F.softmax(x + 1e-6, dim=1)
         # sum over the number of samples of given class and compute mean
         b = b.sum(dim=0) / x.size(0)  # we want to minimize the negative entropy
         # sum over the number of classes
         b = b.sum()
-        return - b
+        return b
 
 
 # Loss for the reconstructor
