@@ -118,7 +118,7 @@ def main(opt):
     if (not opt['experiment'] == 'baseline' and not opt['domain_generalization']):
         experiment.tSNE_plot(train_loader, extract_features_branch=0, iter='final', base_path=opt['output_path'])
 
-    if not opt['domain_generalization']:
+    if not opt['domain_generalization'] or opt['experiment'] == 'baseline':
         test_accuracy, _ = experiment.validate(test_loader, test=True, **loss_acc_logger)
         logging.info(f'[TEST] Accuracy: {(100 * test_accuracy):.2f}')
 
