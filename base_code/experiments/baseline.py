@@ -44,7 +44,7 @@ class BaselineExperiment: # See point 1. of the project
 
         return iteration, best_accuracy, total_train_loss
 
-    def train_iteration(self, data, **loss_acc_logger):
+    def train_iteration(self, data, loss_acc_logger):
         if self.opt['domain_generalization']:
             x, y, _ = data  # the domain label in the baseline is useless
         else:
@@ -60,9 +60,12 @@ class BaselineExperiment: # See point 1. of the project
         loss.backward()
         self.optimizer.step()
 
+        loss_acc_logger['loss_log_train'] += loss
+        loss_acc_logger['train_counter'] += 1
+
         return loss.item()
 
-    def validate(self, loader, test=False, **loss_acc_logger):
+    def validate(self, loader, loss_acc_logger, test=False):
         self.model.eval()
         accuracy = 0
         count = 0
@@ -93,5 +96,9 @@ class BaselineExperiment: # See point 1. of the project
 
         mean_accuracy = accuracy / count
         mean_loss = loss / count
+
+        loss_acc_logger['loss_log_val'] += mean_loss
+        loss_acc_logger['val_counter'] += 1        
+
         self.model.train()
         return mean_accuracy, mean_loss

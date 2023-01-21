@@ -8,7 +8,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-
 W1 = 0.99
 W2 = 0.099
 W3 = 0.00001
@@ -16,14 +15,15 @@ ALPHA_ENTROPY = 0.7
 
 
 class DomainDisentangleExperiment:  # See point 2. of the project
-    
+
     def __init__(self, opt):
         # Utils
         self.opt = opt
         self.device = torch.device('cpu' if opt['cpu'] else 'cuda:0')
 
         # Setup model
-        self.model = DomainDisentangleModel() if not opt['domain_generalization'] else DomainGeneralizationModel()
+        self.model = DomainDisentangleModel(
+        ) if not opt['domain_generalization'] else DomainGeneralizationModel()
         self.model.train()
         self.model.to(self.device)
         for param in self.model.parameters():
@@ -44,8 +44,8 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         }
 
         # Setup of losses
-        self.criterion = [torch.nn.CrossEntropyLoss(), NegHLoss(), torch.nn.CrossEntropyLoss(), NegHLoss(), ReconstructionLoss()]
-
+        self.criterion = [torch.nn.CrossEntropyLoss(), NegHLoss(
+        ), torch.nn.CrossEntropyLoss(), NegHLoss(), ReconstructionLoss()]
 
     def save_checkpoint(self, path, iteration, best_accuracy, total_train_loss):
         checkpoint = {}
@@ -66,7 +66,6 @@ class DomainDisentangleExperiment:  # See point 2. of the project
 
         torch.save(checkpoint, path)
 
-
     def load_checkpoint(self, path):
         checkpoint = torch.load(path)
 
@@ -78,25 +77,24 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         self.optimizers['Gen'].load_state_dict(checkpoint['optimizer'][0])
         self.optimizers['Cat_Enc'].load_state_dict(checkpoint['optimizer'][1])
         self.optimizers['Dom_Enc'].load_state_dict(checkpoint['optimizer'][2])
-        self.optimizers['Cat_Class'].load_state_dict(checkpoint['optimizer'][3])
-        self.optimizers['Dom_Class'].load_state_dict(checkpoint['optimizer'][4])
+        self.optimizers['Cat_Class'].load_state_dict(
+            checkpoint['optimizer'][3])
+        self.optimizers['Dom_Class'].load_state_dict(
+            checkpoint['optimizer'][4])
         self.optimizers['Recon'].load_state_dict(checkpoint['optimizer'][5])
 
         return iteration, best_accuracy, total_train_loss
 
-
     def reset_gradient(self):
         for opt in self.optimizers.values():
             opt.zero_grad()
-
 
     def optimize_step_on_optimizers(self, optim_key_list):
         for k in optim_key_list:
             self.optimizers[k].step()
         self.reset_gradient()
 
-
-    def train_iteration(self, data, **loss_acc_logger):
+    def train_iteration(self, data, loss_acc_logger):
 
         if self.opt['domain_generalization']:
             src_img, category_labels, domain_labels = data
@@ -140,7 +138,8 @@ class DomainDisentangleExperiment:  # See point 2. of the project
             loss4 = self.criterion[4](logits, fG_src)
             reconstruction_loss = loss4 * W3
             reconstruction_loss.backward()
-            self.optimize_step_on_optimizers(['Gen', 'Cat_Enc', 'Dom_Enc', 'Recon'])
+            self.optimize_step_on_optimizers(
+                ['Gen', 'Cat_Enc', 'Dom_Enc', 'Recon'])
 
         else:
             src_img, category_labels, tgt_img, _ = data
@@ -192,33 +191,37 @@ class DomainDisentangleExperiment:  # See point 2. of the project
             # Confuse Domain Classifier (freeze DC)
             logits1 = self.model(src_img, 1)
             logits2 = self.model(tgt_img, 1)
-            dc_confusion_loss = W1 * self.criterion[1](cat((logits1, logits2), dim=1)) * ALPHA_ENTROPY
+            dc_confusion_loss = W1 * \
+                self.criterion[1](
+                    cat((logits1, logits2), dim=1)) * ALPHA_ENTROPY
             dc_confusion_loss.backward()
             self.optimize_step_on_optimizers(['Cat_Enc'])
-
 
             # DOMAIN DISENTANGLEMENT
             # Train Domain Classifier
             logits1 = self.model(src_img, 2)
             # create tensor with scr_domain label = 0
-            src_dom_label = torch.full((batch_size,), fill_value=0, device=self.device)
+            src_dom_label = torch.full(
+                (batch_size,), fill_value=0, device=self.device)
 
             logits2 = self.model(tgt_img, 2)
             # create tensor with tgt_domain label = 1
-            tgt_dom_label = torch.full((batch_size,), fill_value=1, device=self.device)
+            tgt_dom_label = torch.full(
+                (batch_size,), fill_value=1, device=self.device)
 
             dom_classif_loss = W2 * self.criterion[2](cat((logits1, logits2), dim=0),
-                                                                  cat((src_dom_label, tgt_dom_label), dim=0))
+                                                      cat((src_dom_label, tgt_dom_label), dim=0))
             dom_classif_loss.backward()
             self.optimize_step_on_optimizers(['Gen', 'Dom_Enc', 'Dom_Class'])
 
             # Confuse Category Classifier
             logits1 = self.model(src_img, 3)
             logits2 = self.model(tgt_img, 3)
-            c_confusion_loss = W2 * self.criterion[3](cat((logits1, logits2), dim=1)) * ALPHA_ENTROPY
+            c_confusion_loss = W2 * \
+                self.criterion[3](
+                    cat((logits1, logits2), dim=1)) * ALPHA_ENTROPY
             c_confusion_loss.backward()
             self.optimize_step_on_optimizers(['Dom_Enc'])
-
 
             # RECONSTRUCTION
             # Extract features from feature extractor
@@ -232,21 +235,16 @@ class DomainDisentangleExperiment:  # See point 2. of the project
             reconstruction_loss.backward()
             self.optimize_step_on_optimizers(['Cat_Enc', 'Dom_Enc', 'Recon'])
 
-        loss = cat_classif_loss + dc_confusion_loss + dom_classif_loss + c_confusion_loss + reconstruction_loss
+        loss = cat_classif_loss + dc_confusion_loss + \
+            dom_classif_loss + c_confusion_loss + reconstruction_loss
 
-        loss_acc_logger['loss_log']['cat_classif_loss'] += cat_classif_loss
-        loss_acc_logger['loss_log']['dc_confusion_entr_loss'] += dc_confusion_loss
-        loss_acc_logger['loss_log']['dom_classif_loss'] += dom_classif_loss
-        loss_acc_logger['loss_log']['c_confusion_entr_loss'] += c_confusion_loss
-        loss_acc_logger['loss_log']['reconstr_loss'] += reconstruction_loss
-        loss_acc_logger['loss_log']['total_loss'] += loss
+        loss_acc_logger['loss_log_train'] += loss
         loss_acc_logger['train_counter'] += 1
 
         self.warmup_counter += 1
         return loss.item()
 
-
-    def validate(self, loader, test=False, **loss_acc_logger):
+    def validate(self, loader, loss_acc_logger, test=False):
         self.model.eval()
         category_accuracy = 0
         category_count = 0
@@ -255,10 +253,10 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         loss = 0
         with torch.no_grad():
             if self.opt['domain_generalization']:
-                 for img, category_labels, domain_labels in loader:
+                for img, category_labels, domain_labels in loader:
                     img = img.to(self.device)
                     category_labels = category_labels.to(self.device)
-                    domain_labels= domain_labels.to(self.device)
+                    domain_labels = domain_labels.to(self.device)
                     batch_size = img.size(0)
 
                     # Extract features from feature extractor
@@ -266,32 +264,37 @@ class DomainDisentangleExperiment:  # See point 2. of the project
 
                     # CATEGORY CLASSIFICATION (only on src_img)
                     logits = self.model(img, 0)
-                    cat_classif_loss = W1 * self.criterion[0](logits, category_labels)
+                    cat_classif_loss = W1 * \
+                        self.criterion[0](logits, category_labels)
                     pred = torch.argmax(logits, dim=-1)
                     category_accuracy += (pred == category_labels).sum().item()
                     category_count += img.size(0)
 
                     # Confuse Domain Classifier
                     logits = self.model(img, 1)
-                    dc_confusion_loss = W1 * self.criterion[1](logits) * ALPHA_ENTROPY
+                    dc_confusion_loss = W1 * \
+                        self.criterion[1](logits) * ALPHA_ENTROPY
 
                     # DOMAIN CLASSIFICATION
                     logits = self.model(img, 2)
                     pred = torch.argmax(logits, dim=-1)
                     domain_accuracy += (pred == domain_labels).sum().item()
                     domain_count += img.size(0)
-                    dom_classif_loss = W2 * self.criterion[2](logits, domain_labels)
+                    dom_classif_loss = W2 * \
+                        self.criterion[2](logits, domain_labels)
 
                     # Confuse Category Classifier
                     logits = self.model(img, 3)
-                    c_confusion_loss = W2 * self.criterion[3](logits) * ALPHA_ENTROPY
+                    c_confusion_loss = W2 * \
+                        self.criterion[3](logits) * ALPHA_ENTROPY
 
                     # RECONSTRUCTION
                     logits = self.model(img, 4)
                     loss4 = self.criterion[4](logits, fG)
                     reconstruction_loss = loss4 * W3
 
-                    loss += cat_classif_loss + dc_confusion_loss + dom_classif_loss + c_confusion_loss + reconstruction_loss
+                    loss += cat_classif_loss + dc_confusion_loss + \
+                        dom_classif_loss + c_confusion_loss + reconstruction_loss
 
             else:
                 for src_img, category_labels, tgt_img, tgt_category_labels in loader:
@@ -308,7 +311,8 @@ class DomainDisentangleExperiment:  # See point 2. of the project
 
                     # CATEGORY CLASSIFICATION (only on src_img during validation)
                     logits = self.model(src_img, 0)
-                    cat_classif_loss1 = W1 * self.criterion[0](logits, category_labels)
+                    cat_classif_loss1 = W1 * \
+                        self.criterion[0](logits, category_labels)
                     pred = torch.argmax(logits, dim=-1)
                     category_accuracy += (pred == category_labels).sum().item()
                     category_count += src_img.size(0)
@@ -316,42 +320,49 @@ class DomainDisentangleExperiment:  # See point 2. of the project
                     # If testing check category label on target source too
                     if test:
                         logits = self.model(tgt_img, 0)
-                        cat_classif_loss2 = W1 * self.criterion[0](logits, tgt_category_labels)
+                        cat_classif_loss2 = W1 * \
+                            self.criterion[0](logits, tgt_category_labels)
                         pred = torch.argmax(logits, dim=-1)
-                        category_accuracy += (pred == tgt_category_labels).sum().item()
+                        category_accuracy += (pred ==
+                                              tgt_category_labels).sum().item()
                         category_count += tgt_img.size(0)
-                        cat_classif_loss = (cat_classif_loss1 + cat_classif_loss2) / 2
+                        cat_classif_loss = (
+                            cat_classif_loss1 + cat_classif_loss2) / 2
                     else:
                         cat_classif_loss = cat_classif_loss1
-
 
                     # Confuse Domain Classifier
                     logits1 = self.model(src_img, 1)
                     logits2 = self.model(tgt_img, 1)
-                    dc_confusion_loss = W1 * self.criterion[1](cat((logits1, logits2), dim=1)) * ALPHA_ENTROPY
+                    dc_confusion_loss = W1 * \
+                        self.criterion[1](
+                            cat((logits1, logits2), dim=1)) * ALPHA_ENTROPY
 
                     # DOMAIN CLASSIFICATION
                     logits1 = self.model(src_img, 2)
                     # create tensor with scr_domain label = 0
-                    src_dom_label = torch.full((batch_size,), fill_value=0, device=self.device)
+                    src_dom_label = torch.full(
+                        (batch_size,), fill_value=0, device=self.device)
                     pred = torch.argmax(logits1, dim=-1)
                     domain_accuracy += (pred == src_dom_label).sum().item()
                     domain_count += src_img.size(0)
 
                     logits2 = self.model(tgt_img, 2)
                     # create tensor with tgt_domain label = 1
-                    tgt_dom_label = torch.full((batch_size,), fill_value=1, device=self.device)
+                    tgt_dom_label = torch.full(
+                        (batch_size,), fill_value=1, device=self.device)
                     pred = torch.argmax(logits2, dim=-1)
                     domain_accuracy += (pred == tgt_dom_label).sum().item()
                     domain_count += tgt_img.size(0)
                     dom_classif_loss = W2 * self.criterion[2](cat((logits1, logits2), dim=0),
-                                                                          cat((src_dom_label, tgt_dom_label), dim=0))
-
+                                                              cat((src_dom_label, tgt_dom_label), dim=0))
 
                     # Confuse Category Classifier
                     logits1 = self.model(src_img, 3)
                     logits2 = self.model(tgt_img, 3)
-                    c_confusion_loss = W2 * self.criterion[3](cat((logits1, logits2), dim=1)) * ALPHA_ENTROPY
+                    c_confusion_loss = W2 * \
+                        self.criterion[3](
+                            cat((logits1, logits2), dim=1)) * ALPHA_ENTROPY
 
                     # RECONSTRUCTION
                     logits1 = self.model(src_img, 4)
@@ -360,23 +371,16 @@ class DomainDisentangleExperiment:  # See point 2. of the project
                     loss4b = self.criterion[4](logits2, fG_tgt)
                     reconstruction_loss = (loss4a + loss4b) / 2 * W3
 
-                    loss += cat_classif_loss + dc_confusion_loss + dom_classif_loss + c_confusion_loss + reconstruction_loss
-
+                    loss += cat_classif_loss + dc_confusion_loss + \
+                        dom_classif_loss + c_confusion_loss + reconstruction_loss
 
         mean_accuracy = category_accuracy / category_count
         mean_loss = loss / category_count
-        mean_domain_acc = domain_accuracy / domain_count
+        # mean_domain_acc = domain_accuracy / domain_count
 
-        loss_acc_logger['loss_log_val']['cat_classif_loss'] += cat_classif_loss
-        loss_acc_logger['loss_log_val']['dc_confusion_entr_loss'] += dc_confusion_loss
-        loss_acc_logger['loss_log_val']['dom_classif_loss'] += dom_classif_loss
-        loss_acc_logger['loss_log_val']['c_confusion_entr_loss'] += c_confusion_loss
-        loss_acc_logger['loss_log_val']['reconstr_loss'] += reconstruction_loss
-        loss_acc_logger['loss_log_val']['total_loss'] += mean_loss
-
-        loss_acc_logger['acc_logger']['cat_classif_acc'] += mean_accuracy
-        loss_acc_logger['acc_logger']['dom_classif_acc'] += mean_domain_acc
+        loss_acc_logger['loss_log_val'] += mean_loss
         loss_acc_logger['val_counter'] += 1
+        # loss_acc_logger['domain_acc'] += mean_domain_acc
 
         self.model.train()
         return mean_accuracy, mean_loss
@@ -405,8 +409,6 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         print("acc = ", mean_accuracy)
         return mean_accuracy, mean_loss
 
-
-
     def tSNE_plot(self, loader, extract_features_branch=0, iter=0, base_path=''):
         dataset = []
         labels = []
@@ -414,7 +416,8 @@ class DomainDisentangleExperiment:  # See point 2. of the project
             src_img, _, tgt_img, _ = data
             src_img = src_img.to(self.device)
             tgt_img = tgt_img.to(self.device)
-            fG_src = self.model(src_img, extract_features_branch)  # from category encoder
+            # from category encoder
+            fG_src = self.model(src_img, extract_features_branch)
             fG_tgt = self.model(tgt_img, extract_features_branch)
             fG_src = fG_src.detach().cpu().numpy()
             fG_tgt = fG_tgt.detach().cpu().numpy()
@@ -440,7 +443,8 @@ class DomainDisentangleExperiment:  # See point 2. of the project
                 tgt_x_coords.append(tsne_results[i][0])
                 tgt_y_coords.append(tsne_results[i][1])
             i += 1
-        src = plt.scatter(src_x_coords, src_y_coords, c='blue', alpha=0.5, s=10)
+        src = plt.scatter(src_x_coords, src_y_coords,
+                          c='blue', alpha=0.5, s=10)
         tgt = plt.scatter(tgt_x_coords, tgt_y_coords, c='red', alpha=0.5, s=10)
         plt.legend((src, tgt),
                    ('source', 'target'),
@@ -448,6 +452,6 @@ class DomainDisentangleExperiment:  # See point 2. of the project
                    loc='upper right',
                    ncol=1,
                    fontsize=6)
-        #plt.show()
+        # plt.show()
         plt.savefig(f'{base_path}_tSNE_at_iter_{iter}.png')
         plt.clf()

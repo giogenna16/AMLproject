@@ -22,7 +22,7 @@ def parse_arguments():
     parser.add_argument('--test', action='store_true', help='If set, the experiment will skip training.')
     
     # Additional arguments can go below this line:
-    #parser.add_argument('--test', type=str, default='some default value', help='some hint that describes the effect')
+    # parser.add_argument('--test', type=str, default='some default value', help='some hint that describes the effect')
 
     # Build options dict
     opt = vars(parser.parse_args())
