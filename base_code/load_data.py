@@ -458,7 +458,7 @@ def build_splits_domain_generalization(opt):
                               source_category_ratios.items()}
 
     # Build splits - we train only on the source domain (Art Painting)
-    val_split_length = source_total_examples * 0.2  # 20% of the training split used for validation
+    val_split_length = source_total_examples * 0.1  # 10% of the training split used for validation
 
     train_examples = []
     val_examples = []

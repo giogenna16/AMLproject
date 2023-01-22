@@ -10,10 +10,10 @@ import matplotlib.pyplot as plt
 
 import wandb
 
-W1 = 0.99
-W2 = 0.099  # Being used for all "domain" related losses (DomEnc, DomClassif, DomEntropy, and Clip)
-W3 = 0.001
-ALPHA_ENTROPY = 0.7
+W1 = 1.0
+W2 = 0.05  # Being used for all "domain" related losses (DomEnc, DomClassif, DomEntropy, and Clip)
+W3 = 0.0001
+ALPHA_ENTROPY = 0.01
 tgt_dom = 'photo'
 # weight decay ?
 
@@ -187,30 +187,30 @@ class CLIPDisentangleExperiment: # See point 4. of the project
             self.reset_gradient()
 
             # WARMUP: Train the category classifier and the domain classifier alternatively
-            if self.warmup_counter < 1200:
-                self.warmup_counter += 1
+#            if self.warmup_counter < 1200:
+#                self.warmup_counter += 1
 
                 # Train Category Classifier
-                logits = self.model(src_img, 0)
-                cat_classif_loss = self.criterion[0](logits, category_labels)
-                cat_classif_loss.backward()
-                self.optimize_step_on_optimizers(['Cat_Enc', 'Cat_Class'])
+#                logits = self.model(src_img, 0)
+#                cat_classif_loss = self.criterion[0](logits, category_labels)
+#                cat_classif_loss.backward()
+#                self.optimize_step_on_optimizers(['Cat_Enc', 'Cat_Class'])
 
                 # Train Domain Classifier
-                logits1 = self.model(src_img, 2)
-                # create tensor with scr_domain label = 0
-                src_dom_label = torch.full((batch_size,), fill_value=0, device=self.device)
-                logits2 = self.model(tgt_img, 2)
-                # create tensor with tgt_domain label = 1
-                tgt_dom_label = torch.full((batch_size,), fill_value=1, device=self.device)
-                dom_classif_loss = self.criterion[2](cat((logits1, logits2), dim=0),
-                                                     cat((src_dom_label, tgt_dom_label), dim=0))
-                dom_classif_loss.backward()
-                self.optimize_step_on_optimizers(['Dom_Enc', 'Dom_Class'])
-                return cat_classif_loss.item() + dom_classif_loss.item()
+#                logits1 = self.model(src_img, 2)
+#                # create tensor with scr_domain label = 0
+#                src_dom_label = torch.full((batch_size,), fill_value=0, device=self.device)
+#                logits2 = self.model(tgt_img, 2)
+#                # create tensor with tgt_domain label = 1
+#                tgt_dom_label = torch.full((batch_size,), fill_value=1, device=self.device)
+#                dom_classif_loss = self.criterion[2](cat((logits1, logits2), dim=0),
+#                                                     cat((src_dom_label, tgt_dom_label), dim=0))
+#                dom_classif_loss.backward()
+#                self.optimize_step_on_optimizers(['Dom_Enc', 'Dom_Class'])
+#                return cat_classif_loss.item() + dom_classif_loss.item()
 
-            if self.warmup_counter == 1200:
-                print("Finished warmup")
+#            if self.warmup_counter == 1200:
+#                print("Finished warmup")
 
             # CATEGORY DISENTANGLEMENT
             # Train Category Classifier
@@ -278,8 +278,8 @@ class CLIPDisentangleExperiment: # See point 4. of the project
 
         loss = cat_classif_loss + dc_confusion_loss + dom_classif_loss + c_confusion_loss + reconstruction_loss + lossClip
 
-        if self.warmup_counter % 50 == 0:
-            print(f"LOSSES: cat_class: {cat_classif_loss} | dom_class: {dom_classif_loss} | dom_confusion: {dom_classif_loss} | cat_confusion: {c_confusion_loss} | reconstr: {reconstruction_loss} | clip: {lossClip}|| Total: {loss}")
+ #       if self.warmup_counter % 50 == 0:
+ #           print(f"LOSSES: cat_class: {cat_classif_loss} | dom_class: {dom_classif_loss} | dom_confusion: {dom_classif_loss} | cat_confusion: {c_confusion_loss} | reconstr: {reconstruction_loss} | clip: {lossClip}|| Total: {loss}")
 
         loss_acc_logger['loss_log']['cat_classif_loss'] += cat_classif_loss
         loss_acc_logger['loss_log']['dc_confusion_entr_loss'] += dc_confusion_loss
@@ -295,6 +295,7 @@ class CLIPDisentangleExperiment: # See point 4. of the project
             'tr_dom_classif_loss': dom_classif_loss,
             'tr_c_confusion_entr_loss': c_confusion_loss,
             'tr_reconstr_loss': reconstruction_loss,
+            'tr_clip_loss': lossClip,
             'tr_total_loss': loss,
         })
 
@@ -463,6 +464,7 @@ class CLIPDisentangleExperiment: # See point 4. of the project
             'val_dom_classif_loss': dom_classif_loss,
             'val_c_confusion_entr_loss': c_confusion_loss,
             'val_reconstr_loss': reconstruction_loss,
+            'val_clip_loss': lossClip,
             'val_total_loss': mean_loss,
             'cat_classif_acc': mean_accuracy,
             'dom_classif_acc': mean_domain_acc
