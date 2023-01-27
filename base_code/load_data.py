@@ -6,7 +6,7 @@ import random
 import clip
 
 import torch
-from utils.reproducibility import make_it_reproducible, seed_worker
+#from utils.reproducibility import make_it_reproducible, seed_worker
 
 
 CATEGORIES = {
@@ -173,10 +173,10 @@ def read_lines(data_path, domain_name):
 def build_splits_baseline(opt):
 
     # reproducibility
-    seed = 0
-    g = torch.Generator()
-    make_it_reproducible(seed)
-    g.manual_seed(seed)
+#    seed = 0
+#    g = torch.Generator()
+#    make_it_reproducible(seed)
+#    g.manual_seed(seed)
 
     if opt['domain_generalization']:
         return build_splits_domain_generalization(opt)
@@ -230,19 +230,26 @@ def build_splits_baseline(opt):
         ])
 
         # Dataloaders
-        train_loader = DataLoader(PACSDatasetBaseline(train_examples, train_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=True, worker_init_fn=seed_worker, generator=g)
-        val_loader = DataLoader(PACSDatasetBaseline(val_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False, worker_init_fn=seed_worker, generator=g)
-        test_loader = DataLoader(PACSDatasetBaseline(test_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False, worker_init_fn=seed_worker, generator=g)
+#        train_loader = DataLoader(PACSDatasetBaseline(train_examples, train_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=True, worker_init_fn=seed_worker, generator=g)
+#        val_loader = DataLoader(PACSDatasetBaseline(val_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False, worker_init_fn=seed_worker, generator=g)
+#        test_loader = DataLoader(PACSDatasetBaseline(test_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False, worker_init_fn=seed_worker, generator=g)
+
+        train_loader = DataLoader(PACSDatasetBaseline(train_examples, train_transform), batch_size=opt['batch_size'],
+                                  num_workers=opt['num_workers'], shuffle=True)
+        val_loader = DataLoader(PACSDatasetBaseline(val_examples, eval_transform), batch_size=opt['batch_size'],
+                                num_workers=opt['num_workers'], shuffle=False)
+        test_loader = DataLoader(PACSDatasetBaseline(test_examples, eval_transform), batch_size=opt['batch_size'],
+                                 num_workers=opt['num_workers'], shuffle=False)
 
         return train_loader, val_loader, test_loader
 
 def build_splits_domain_disentangle(opt):
 
     # reproducibility
-    seed = 0
-    g = torch.Generator()
-    make_it_reproducible(seed)
-    g.manual_seed(seed)
+#    seed = 0
+#    g = torch.Generator()
+#    make_it_reproducible(seed)
+#    g.manual_seed(seed)
 
     if opt['domain_generalization']:
         return build_splits_domain_generalization(opt)
@@ -321,18 +328,22 @@ def build_splits_domain_disentangle(opt):
         ])
 
         # Dataloaders
-        train_loader = DataLoader(PACSDatasetDisentangle(train_source_examples, train_target_examples, train_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=True, worker_init_fn=seed_worker, generator=g)
-        val_loader = DataLoader(PACSDatasetDisentangle(val_source_examples, val_target_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False, worker_init_fn=seed_worker, generator=g)
-        test_loader = DataLoader(PACSDatasetDisentangle(test_source_examples, test_target_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False, worker_init_fn=seed_worker, generator=g)
+#        train_loader = DataLoader(PACSDatasetDisentangle(train_source_examples, train_target_examples, train_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=True, worker_init_fn=seed_worker, generator=g)
+#        val_loader = DataLoader(PACSDatasetDisentangle(val_source_examples, val_target_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False, worker_init_fn=seed_worker, generator=g)
+#        test_loader = DataLoader(PACSDatasetDisentangle(test_source_examples, test_target_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False, worker_init_fn=seed_worker, generator=g)
+
+        train_loader = DataLoader(PACSDatasetDisentangle(train_source_examples, train_target_examples, train_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=True)
+        val_loader = DataLoader(PACSDatasetDisentangle(val_source_examples, val_target_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False)
+        test_loader = DataLoader(PACSDatasetDisentangle(test_source_examples, test_target_examples, eval_transform), batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False)
 
         return train_loader, val_loader, test_loader
 
 def build_splits_clip_disentangle(opt):
     # reproducibility
-    seed = 0
-    g = torch.Generator()
-    make_it_reproducible(seed)
-    g.manual_seed(seed)
+#    seed = 0
+#    g = torch.Generator()
+#    make_it_reproducible(seed)
+#    g.manual_seed(seed)
 
     source_domain = 'art_painting'
     target_domain = opt['target_domain']
@@ -411,15 +422,25 @@ def build_splits_clip_disentangle(opt):
     ])
 
     # Dataloaders
-    train_loader = DataLoader(PACSDatasetClipDisentangle(train_source_examples, train_target_examples, train_transform, opt['data_path']),
-                              batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=True,
-                              worker_init_fn=seed_worker, generator=g)
-    val_loader = DataLoader(PACSDatasetClipDisentangle(val_source_examples, val_target_examples, eval_transform, opt['data_path']),
-                            batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False,
-                            worker_init_fn=seed_worker, generator=g)
-    test_loader = DataLoader(PACSDatasetClipDisentangle(test_source_examples, test_target_examples, eval_transform, opt['data_path']),
-                             batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False,
-                             worker_init_fn=seed_worker, generator=g)
+#    train_loader = DataLoader(PACSDatasetClipDisentangle(train_source_examples, train_target_examples, train_transform, opt['data_path']),
+#                              batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=True,
+#                              worker_init_fn=seed_worker, generator=g)
+#    val_loader = DataLoader(PACSDatasetClipDisentangle(val_source_examples, val_target_examples, eval_transform, opt['data_path']),
+#                            batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False,
+#                            worker_init_fn=seed_worker, generator=g)
+#    test_loader = DataLoader(PACSDatasetClipDisentangle(test_source_examples, test_target_examples, eval_transform, opt['data_path']),
+#                             batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False,
+#                             worker_init_fn=seed_worker, generator=g)
+
+    train_loader = DataLoader(
+        PACSDatasetClipDisentangle(train_source_examples, train_target_examples, train_transform, opt['data_path']),
+        batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=True)
+    val_loader = DataLoader(
+        PACSDatasetClipDisentangle(val_source_examples, val_target_examples, eval_transform, opt['data_path']),
+        batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False)
+    test_loader = DataLoader(
+        PACSDatasetClipDisentangle(test_source_examples, test_target_examples, eval_transform, opt['data_path']),
+        batch_size=opt['batch_size'], num_workers=opt['num_workers'], shuffle=False)
 
     return train_loader, val_loader, test_loader
 

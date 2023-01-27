@@ -3,12 +3,12 @@ import clip
 from torch import cat
 from models.base_model import ClipDisentangleModel, ClipDisentangleModel_DomainGeneralization
 from experiments.domain_disentangle_losses import *
+import wandb
 
 from sklearn.manifold import TSNE
 import numpy as np
 import matplotlib.pyplot as plt
 
-import wandb
 
 W1 = 1.0
 W2 = 0.05  # Being used for all "domain" related losses (DomEnc, DomClassif, DomEntropy, and Clip)
@@ -24,7 +24,7 @@ config = {
     'alpha_entropy': ALPHA_ENTROPY,
     'target_domain': tgt_dom,
 }
-wandb.init(project='aml_project', notes='domain_disentangle', config=config)
+wandb.init(project='aml_project', notes='clip_disentangle', config=config)
 
 
 class CLIPDisentangleExperiment: # See point 4. of the project

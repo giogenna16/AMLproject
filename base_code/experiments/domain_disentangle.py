@@ -170,33 +170,33 @@ class DomainDisentangleExperiment:  # See point 2. of the project
             self.reset_gradient()
 
             # WARMUP: Train the category classifier and the domain classifier
-            if self.warmup_counter < 1200:
-                self.warmup_counter += 1
+#            if self.warmup_counter < 1200:
+#                self.warmup_counter += 1
 
-                if self.warmup_counter % 5 == 0:
-                    # Train Category Classifier
-                    logits = self.model(src_img, 0)
-                    cat_classif_loss = self.criterion[0](logits, category_labels)
-                    cat_classif_loss.backward()
-                    self.optimize_step_on_optimizers(['Cat_Enc', 'Cat_Class'])
-                    return cat_classif_loss.item()
+#                if self.warmup_counter % 5 == 0:
+#                    # Train Category Classifier
+#                    logits = self.model(src_img, 0)
+#                    cat_classif_loss = self.criterion[0](logits, category_labels)
+#                    cat_classif_loss.backward()
+#                    self.optimize_step_on_optimizers(['Cat_Enc', 'Cat_Class'])
+#                    return cat_classif_loss.item()
 
-                # Train Domain Classifier
-                logits1 = self.model(src_img, 2)
-                # create tensor with scr_domain label = 0
-                src_dom_label = torch.full((batch_size,), fill_value=0, device=self.device)
-                logits2 = self.model(tgt_img, 2)
+#                # Train Domain Classifier
+#                logits1 = self.model(src_img, 2)
+#                # create tensor with scr_domain label = 0
+#                src_dom_label = torch.full((batch_size,), fill_value=0, device=self.device)
+#               logits2 = self.model(tgt_img, 2)
                 # create tensor with tgt_domain label = 1
-                tgt_dom_label = torch.full((batch_size,), fill_value=1, device=self.device)
-                dom_classif_loss = self.criterion[2](cat((logits1, logits2), dim=0),
-                                                     cat((src_dom_label, tgt_dom_label), dim=0))
-                dom_classif_loss.backward()
-                self.optimize_step_on_optimizers(['Dom_Enc', 'Dom_Class'])
+#                tgt_dom_label = torch.full((batch_size,), fill_value=1, device=self.device)
+#                dom_classif_loss = self.criterion[2](cat((logits1, logits2), dim=0),
+#                                                     cat((src_dom_label, tgt_dom_label), dim=0))
+#                dom_classif_loss.backward()
+#                self.optimize_step_on_optimizers(['Dom_Enc', 'Dom_Class'])
 
-                return dom_classif_loss.item()
+#                return dom_classif_loss.item()
 
-            if self.warmup_counter == 1200:
-                print("Finished warmup")
+#            if self.warmup_counter == 1200:
+#                print("Finished warmup")
 
             # CATEGORY DISENTANGLEMENT
             # Train Category Classifier
@@ -250,8 +250,8 @@ class DomainDisentangleExperiment:  # See point 2. of the project
 
         loss = cat_classif_loss + dc_confusion_loss + dom_classif_loss + c_confusion_loss + reconstruction_loss
 
-        if self.warmup_counter % 50 == 0:
-            print(f"LOSSES: cat_class: {cat_classif_loss} | dom_class: {dom_classif_loss} | dom_confusion: {dc_confusion_loss} | cat_confusion: {c_confusion_loss} | reconstr: {reconstruction_loss} || Total: {loss}")
+#        if self.warmup_counter % 50 == 0:
+#            print(f"LOSSES: cat_class: {cat_classif_loss} | dom_class: {dom_classif_loss} | dom_confusion: {dc_confusion_loss} | cat_confusion: {c_confusion_loss} | reconstr: {reconstruction_loss} || Total: {loss}")
 
         loss_acc_logger['loss_log']['cat_classif_loss'] += cat_classif_loss
         loss_acc_logger['loss_log']['dc_confusion_entr_loss'] += dc_confusion_loss
