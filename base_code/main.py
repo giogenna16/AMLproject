@@ -126,7 +126,7 @@ def main(opt):
     if not opt['experiment'] == 'baseline':
         test_tgt_only_loader = get_target_data(opt)
         test_accuracy, _ = experiment.test_on_target(test_tgt_only_loader)
-        logging.info(f'[TEST TARGET] Accuracy: {(100 * test_accuracy):.2f}')
+        logging.info(f'[TEST TARGET LAST] Accuracy: {(100 * test_accuracy):.2f}')
 
 
     # Test on best
@@ -134,7 +134,7 @@ def main(opt):
 
     # Plot tSNE features only for domain disentanglement (with or w/o Clip)
     if (not opt['experiment'] == 'baseline' and not opt['domain_generalization']):
-        experiment.tSNE_plot(train_loader, extract_features_branch=0, iter='final_test', base_path=opt['output_path'])
+        experiment.tSNE_plot(train_loader, extract_features_branch=0, iter='final_best', base_path=opt['output_path'])
 
     if not opt['domain_generalization'] or opt['experiment'] == 'baseline':
         test_accuracy, _ = experiment.validate(test_loader, test=True, **loss_acc_logger)
@@ -144,7 +144,7 @@ def main(opt):
     if not opt['experiment'] == 'baseline':
         test_tgt_only_loader = get_target_data(opt)
         test_accuracy, _ = experiment.test_on_target(test_tgt_only_loader)
-        logging.info(f'[TEST TARGET] Accuracy: {(100 * test_accuracy):.2f}')
+        logging.info(f'[TEST TARGET BEST] Accuracy: {(100 * test_accuracy):.2f}')
 
 
 if __name__ == '__main__':
