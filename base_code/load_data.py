@@ -419,7 +419,7 @@ def build_splits_domain_generalization(opt):
         domains_indeces[i] = tmp_list
         separated_source_examples.append(tmp)
         i += 1
-    # source_examples= {k: [d[k] for d in separated_source_examples] for k in separated_source_examples[0]} # dict comprehension
+
     source_examples = {}  # {key=category label : value= examples related to the key of all the domains}
     for k in separated_source_examples[0]:
         value = []
@@ -513,7 +513,7 @@ def build_splits_domain_generalization_clip(opt):
         domains_indeces[i] = tmp_list
         separated_source_examples.append(tmp)
         i += 1
-    # source_examples= {k: [d[k] for d in separated_source_examples] for k in separated_source_examples[0]} # dict comprehension
+
     source_examples = {}  # {key=category label : value= examples related to the key of all the domains}
     for k in separated_source_examples[0]:
         value = []
