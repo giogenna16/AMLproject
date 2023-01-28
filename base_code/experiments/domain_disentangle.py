@@ -11,9 +11,9 @@ import matplotlib.pyplot as plt
 
 
 W1 = 0.99
-W2 = 0.099
-W3 = 0.00001
-ALPHA_ENTROPY = 0.7
+W2 = 0.0099
+W3 = 0.0001
+ALPHA_ENTROPY = 0.1
 tgt_dom = 'photo'
 # weight decay ?
 

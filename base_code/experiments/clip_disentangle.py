@@ -10,11 +10,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-W1 = 1.0
-W2 = 0.05  # Being used for all "domain" related losses (DomEnc, DomClassif, DomEntropy, and Clip)
+W1 = 0.99
+W2 = 0.0099  # Being used for all "domain" related losses (DomEnc, DomClassif, DomEntropy, and Clip)
 W3 = 0.0001
 W4 = 1.0  # Weight for Clip
-ALPHA_ENTROPY = 0.01
+ALPHA_ENTROPY = 0.1
 tgt_dom = 'photo'
 # weight decay ?
 
