@@ -11,10 +11,10 @@ import matplotlib.pyplot as plt
 
 W1 = 0.99
 # Being used for all "domain" related losses (DomEnc, DomClassif, DomEntropy, and Clip)
-W2 = 0.099
-W3 = 0.001
+W2 = 0.0099
+W3 = 0.0001
 W4 = 1.0 # Clip loss weight
-ALPHA_ENTROPY = 0.7
+ALPHA_ENTROPY = 0.1
 
 
 class CLIPDisentangleExperiment:  # See point 4. of the project
