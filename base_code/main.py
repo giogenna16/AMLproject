@@ -120,7 +120,7 @@ def main(opt):
 
     if not opt['domain_generalization'] or opt['experiment'] == 'baseline':
         test_accuracy, _ = experiment.validate(test_loader, test=True, **loss_acc_logger)
-        logging.info(f'[TEST] Accuracy: {(100 * test_accuracy):.2f}')
+        logging.info(f'[TEST LAST] Accuracy: {(100 * test_accuracy):.2f}')
 
     # Test on Target Only if not baseline
     if not opt['experiment'] == 'baseline':
@@ -138,7 +138,7 @@ def main(opt):
 
     if not opt['domain_generalization'] or opt['experiment'] == 'baseline':
         test_accuracy, _ = experiment.validate(test_loader, test=True, **loss_acc_logger)
-        logging.info(f'[TEST] Accuracy: {(100 * test_accuracy):.2f}')
+        logging.info(f'[TEST BEST] Accuracy: {(100 * test_accuracy):.2f}')
 
     # Test on Target Only if not baseline
     if not opt['experiment'] == 'baseline':
