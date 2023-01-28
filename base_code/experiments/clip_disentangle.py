@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 W1 = 1.0
 W2 = 0.05  # Being used for all "domain" related losses (DomEnc, DomClassif, DomEntropy, and Clip)
 W3 = 0.0001
+W4 = 1.0  # Weight for Clip
 ALPHA_ENTROPY = 0.01
 tgt_dom = 'photo'
 # weight decay ?
@@ -21,6 +22,7 @@ config = {
     'w1': W1,
     'w2': W2,
     'w3': W3,
+    'w4': W4,
     'alpha_entropy': ALPHA_ENTROPY,
     'target_domain': tgt_dom,
 }
@@ -147,7 +149,7 @@ class CLIPDisentangleExperiment: # See point 4. of the project
             # CLIP DISENTANGLEMENT
             dom_features = self.model(img, 4)
             text_features = self.clip_model.encode_text(tokenized_text)
-            lossClip = self.criterion[5](dom_features, text_features) * self.config.w2
+            lossClip = self.criterion[5](dom_features, text_features) * self.config.w4
             lossClip.backward()
             self.optimize_step_on_optimizers(['Gen', 'Dom_Enc'])
 
@@ -236,7 +238,7 @@ class CLIPDisentangleExperiment: # See point 4. of the project
             text_features_tgt = self.clip_model.encode_text(tokenized_text_tgt)
             lossClip2 = self.criterion[5](dom_features_tgt, text_features_tgt)
 
-            lossClip = (lossClip1 + lossClip2) * self.config.w2
+            lossClip = (lossClip1 + lossClip2) * self.config.w4
             lossClip.backward()
             self.optimize_step_on_optimizers(['Gen', 'Dom_Enc'])
 
@@ -353,7 +355,7 @@ class CLIPDisentangleExperiment: # See point 4. of the project
                     # CLIP DISENTANGLEMENT
                     dom_features = self.model(img, 4)
                     text_features = self.clip_model.encode_text(tokenized_text)
-                    lossClip = self.criterion[5](dom_features, text_features) * self.config.w2
+                    lossClip = self.criterion[5](dom_features, text_features) * self.config.w4
 
                     loss += cat_classif_loss + dc_confusion_loss + dom_classif_loss + c_confusion_loss + reconstruction_loss + lossClip
 
@@ -437,7 +439,7 @@ class CLIPDisentangleExperiment: # See point 4. of the project
                     lossClip2 = self.criterion[5](dom_features_tgt, text_features_tgt)
 
 
-                    lossClip = (lossClip1 + lossClip2) * self.config.w2
+                    lossClip = (lossClip1 + lossClip2) * self.config.w4
 
                     loss += cat_classif_loss + dc_confusion_loss + dom_classif_loss + c_confusion_loss + reconstruction_loss + lossClip
 
