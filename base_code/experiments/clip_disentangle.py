@@ -13,6 +13,7 @@ W1 = 0.99
 # Being used for all "domain" related losses (DomEnc, DomClassif, DomEntropy, and Clip)
 W2 = 0.099
 W3 = 0.001
+W4 = 1.0 # Clip loss weight
 ALPHA_ENTROPY = 0.7
 
 
@@ -131,7 +132,7 @@ class CLIPDisentangleExperiment:  # See point 4. of the project
             # CLIP DISENTANGLEMENT
             dom_features = self.model(img, 4)
             text_features = self.clip_model.encode_text(tokenized_text)
-            lossClip = self.criterion[5](dom_features, text_features) * W2
+            lossClip = self.criterion[5](dom_features, text_features) * W4
             lossClip.backward()
             self.optimize_step_on_optimizers(['Gen', 'Dom_Enc'])
 
@@ -222,7 +223,7 @@ class CLIPDisentangleExperiment:  # See point 4. of the project
             text_features_tgt = self.clip_model.encode_text(tokenized_text_tgt)
             lossClip2 = self.criterion[5](dom_features_tgt, text_features_tgt)
 
-            lossClip = (lossClip1 + lossClip2) * W2
+            lossClip = (lossClip1 + lossClip2) * W4
             lossClip.backward()
             self.optimize_step_on_optimizers(['Gen', 'Dom_Enc'])
 
@@ -328,7 +329,7 @@ class CLIPDisentangleExperiment:  # See point 4. of the project
                     dom_features = self.model(img, 4)
                     text_features = self.clip_model.encode_text(tokenized_text)
                     lossClip = self.criterion[5](
-                        dom_features, text_features) * W2
+                        dom_features, text_features) * W4
 
                     loss += cat_classif_loss + dc_confusion_loss + dom_classif_loss + \
                         c_confusion_loss + reconstruction_loss + lossClip
@@ -424,7 +425,7 @@ class CLIPDisentangleExperiment:  # See point 4. of the project
                     lossClip2 = self.criterion[5](
                         dom_features_tgt, text_features_tgt)
 
-                    lossClip = (lossClip1 + lossClip2) * W2
+                    lossClip = (lossClip1 + lossClip2) * W4
 
                     loss += cat_classif_loss + dc_confusion_loss + dom_classif_loss + \
                         c_confusion_loss + reconstruction_loss + lossClip
