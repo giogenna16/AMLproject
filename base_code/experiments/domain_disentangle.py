@@ -22,6 +22,7 @@ config = {
     'w1': W1,
     'w2': W2,
     'w3': W3,
+    'w4': W4,
     'alpha_entropy': ALPHA_ENTROPY,
     'target_domain': tgt_dom,
 }
