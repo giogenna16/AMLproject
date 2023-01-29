@@ -112,41 +112,43 @@ def main(opt):
         print("val_accuracies", val_accuracies)
         plot_losses(train_losses, val_losses, val_accuracies, opt)
 
-        # Test on last
-        experiment.load_checkpoint(f'{opt["output_path"]}/last_checkpoint.pth')
+    # Test on last
+    experiment.load_checkpoint(f'{opt["output_path"]}/last_checkpoint.pth')
 
-        # Plot tSNE features only for domain disentanglement (with or w/o Clip)
-        if (not opt['experiment'] == 'baseline' and not opt['domain_generalization']):
-            experiment.tSNE_plot(train_loader, extract_features_branch=0, iter='final_last',
-                                 base_path=opt['output_path'])
+    # Plot tSNE features only for domain disentanglement (with or w/o Clip)
+    if (not opt['experiment'] == 'baseline' and not opt['domain_generalization']):
+        experiment.tSNE_plot(train_loader, extract_features_branch=0, iter='final_last',
+                             base_path=opt['output_path'])
 
-        if not opt['domain_generalization'] or opt['experiment'] == 'baseline':
-            test_accuracy, _ = experiment.validate(test_loader, test=True, **loss_acc_logger)
-            logging.info(f'[TEST LAST] Accuracy: {(100 * test_accuracy):.2f}')
+    if not opt['domain_generalization'] or opt['experiment'] == 'baseline':
+        test_accuracy, _ = experiment.validate(
+            test_loader, loss_acc_logger, test=True)
+        logging.info(f'[TEST LAST] Accuracy: {(100 * test_accuracy):.2f}')
 
-        # Test on Target Only if not baseline
-        if not opt['experiment'] == 'baseline':
-            test_tgt_only_loader = get_target_data(opt)
-            test_accuracy, _ = experiment.test_on_target(test_tgt_only_loader)
-            logging.info(f'[TEST TARGET LAST] Accuracy: {(100 * test_accuracy):.2f}')
+    # Test on Target Only if not baseline
+    if not opt['experiment'] == 'baseline':
+        test_tgt_only_loader = get_target_data(opt)
+        test_accuracy, _ = experiment.test_on_target(test_tgt_only_loader)
+        logging.info(f'[TEST TARGET LAST] Accuracy: {(100 * test_accuracy):.2f}')
 
-        # Test on best
-        experiment.load_checkpoint(f'{opt["output_path"]}/best_checkpoint.pth')
+    # Test on best
+    experiment.load_checkpoint(f'{opt["output_path"]}/best_checkpoint.pth')
 
-        # Plot tSNE features only for domain disentanglement (with or w/o Clip)
-        if (not opt['experiment'] == 'baseline' and not opt['domain_generalization']):
-            experiment.tSNE_plot(train_loader, extract_features_branch=0, iter='final_best',
-                                 base_path=opt['output_path'])
+    # Plot tSNE features only for domain disentanglement (with or w/o Clip)
+    if (not opt['experiment'] == 'baseline' and not opt['domain_generalization']):
+        experiment.tSNE_plot(train_loader, extract_features_branch=0, iter='final_best',
+                             base_path=opt['output_path'])
 
-        if not opt['domain_generalization'] or opt['experiment'] == 'baseline':
-            test_accuracy, _ = experiment.validate(test_loader, test=True, **loss_acc_logger)
-            logging.info(f'[TEST BEST] Accuracy: {(100 * test_accuracy):.2f}')
+    if not opt['domain_generalization'] or opt['experiment'] == 'baseline':
+        test_accuracy, _ = experiment.validate(
+            test_loader, loss_acc_logger, test=True)
+        logging.info(f'[TEST BEST] Accuracy: {(100 * test_accuracy):.2f}')
 
-        # Test on Target Only if not baseline
-        if not opt['experiment'] == 'baseline':
-            test_tgt_only_loader = get_target_data(opt)
-            test_accuracy, _ = experiment.test_on_target(test_tgt_only_loader)
-            logging.info(f'[TEST TARGET BEST] Accuracy: {(100 * test_accuracy):.2f}')
+    # Test on Target Only if not baseline
+    if not opt['experiment'] == 'baseline':
+        test_tgt_only_loader = get_target_data(opt)
+        test_accuracy, _ = experiment.test_on_target(test_tgt_only_loader)
+        logging.info(f'[TEST TARGET BEST] Accuracy: {(100 * test_accuracy):.2f}')
 
 
 if __name__ == '__main__':
