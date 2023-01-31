@@ -10,11 +10,11 @@ import matplotlib.pyplot as plt
 
 
 
-W1 = 0.99
-W2 = 0.0099
+W1 = 1.0
+W2 = 0.09
 W3 = 0.0001
 W4 = 1.0  # Weight for Clip
-ALPHA_ENTROPY = 0.1
+ALPHA_ENTROPY = 0.01
 tgt_dom = 'photo'
 # weight decay ?
 
