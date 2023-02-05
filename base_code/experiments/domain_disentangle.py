@@ -448,23 +448,29 @@ class DomainDisentangleExperiment:  # See point 2. of the project
 
 
 
+
     def tSNE_plot(self, loader, extract_features_branch=0, iter=0, base_path=''):
         dataset = []
         labels = []
+        src_categs = []
+        tgt_categs = []
         for data in loader:
-            src_img, _, tgt_img, _ = data
+            src_img, src_categ, tgt_img, tgt_categ = data
             src_img = src_img.to(self.device)
             tgt_img = tgt_img.to(self.device)
-            fG_src = self.model(src_img, extract_features_branch)  # from category encoder
+            # from category encoder
+            fG_src = self.model(src_img, extract_features_branch)
             fG_tgt = self.model(tgt_img, extract_features_branch)
             fG_src = fG_src.detach().cpu().numpy()
             fG_tgt = fG_tgt.detach().cpu().numpy()
-            for el in fG_src:
+            for i, el in enumerate(fG_src):
                 dataset.append(el)
                 labels.append(0)
-            for el in fG_tgt:
+                src_categs.append(src_categ[i])
+            for i, el in enumerate(fG_tgt):
                 dataset.append(el)
                 labels.append(1)
+                tgt_categs.append(tgt_categ[i])
         dataset = np.asarray(dataset)
         tsne = TSNE()  # t-Distributed Stochastic Neighbor Embedding
         tsne_results = tsne.fit_transform(dataset)
@@ -481,14 +487,19 @@ class DomainDisentangleExperiment:  # See point 2. of the project
                 tgt_x_coords.append(tsne_results[i][0])
                 tgt_y_coords.append(tsne_results[i][1])
             i += 1
-        src = plt.scatter(src_x_coords, src_y_coords, c='blue', alpha=0.5, s=10)
+        src = plt.scatter(src_x_coords, src_y_coords,
+                          c='blue', alpha=0.5, s=10)
+        for i, pnt in enumerate(src_categs):
+            plt.annotate(pnt.item(), (src_x_coords[i], src_y_coords[i]))
         tgt = plt.scatter(tgt_x_coords, tgt_y_coords, c='red', alpha=0.5, s=10)
+        for i, pnt in enumerate(tgt_categs):
+            plt.annotate(pnt.item(), (tgt_x_coords[i], tgt_y_coords[i]))
         plt.legend((src, tgt),
                    ('source', 'target'),
                    scatterpoints=1,
                    loc='upper right',
                    ncol=1,
                    fontsize=6)
-        #plt.show()
+        # plt.show()
         plt.savefig(f'{base_path}_tSNE_at_iter_{iter}.png')
         plt.clf()
