@@ -490,10 +490,12 @@ class DomainDisentangleExperiment:  # See point 2. of the project
         src = plt.scatter(src_x_coords, src_y_coords,
                           c='blue', alpha=0.5, s=10)
         for i, pnt in enumerate(src_categs):
-            plt.annotate(pnt.item(), (src_x_coords[i], src_y_coords[i]))
+            if i % 15 == 0:
+                plt.annotate(pnt.item(), (src_x_coords[i], src_y_coords[i]))
         tgt = plt.scatter(tgt_x_coords, tgt_y_coords, c='red', alpha=0.5, s=10)
         for i, pnt in enumerate(tgt_categs):
-            plt.annotate(pnt.item(), (tgt_x_coords[i], tgt_y_coords[i]))
+            if i % 15 == 0:
+                plt.annotate(pnt.item(), (tgt_x_coords[i], tgt_y_coords[i]))
         plt.legend((src, tgt),
                    ('source', 'target'),
                    scatterpoints=1,
